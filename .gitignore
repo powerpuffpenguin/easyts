@@ -105,3 +105,6 @@ dist
 
 
 /lib/
+*_test.js
+*_test.js.map
+*_test.d.ts

@@ -3,7 +3,8 @@
   "version": "0.0.1",
   "description": "js library written with ts",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "tsc && qunit lib/index_test.js",
+    "build": "tsc"
   },
   "repository": {
     "type": "git",
@@ -15,5 +16,8 @@
     "url": "https://github.com/powerpuffpenguin/easyts/issues"
   },
   "homepage": "https://github.com/powerpuffpenguin/easyts#readme",
-  "devDependencies": {}
+  "devDependencies": {
+    "@types/qunit": "^2.19.3",
+    "qunit": "^2.19.3"
+  }
 }
