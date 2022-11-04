@@ -1,7 +1,11 @@
+import { Exception } from "./exception"
 import { Connection, Signals, Slot, SlotCallback } from "./signals"
 import { FilterCombiner } from "./signals_combiners"
 import { ChangedCallback, VoidCallback } from "./types"
 import { NoResult } from "./values"
+
+export class ChannelException extends Exception { }
+export const errClosed = new ChannelException('write on closed channel')
 
 /**
  * 一個只讀的通道
@@ -29,8 +33,9 @@ export interface WriteChannel<T> {
 
     /**
      * 關閉通道，此後通道將無法寫入，所有阻塞的讀寫都返回，但已經寫入通道的值會保證可以被完全讀取
+     * @returns 如果通道已經被關閉返回false，否則關閉通道並返回true
      */
-    close(): void
+    close(): boolean
     /**
      * 返回通道是否被關閉
      */
@@ -39,7 +44,11 @@ export interface WriteChannel<T> {
 export interface Channel<T> extends ReadChannel<T>, WriteChannel<T> { }
 export class Chan<T> implements ReadChannel<T>, WriteChannel<T> {
     private rw_: RW<T>
-    constructor(buf: number) {
+    /**
+     * 
+     * @param buf 緩衝大小，如果大於0 則爲 通道啓用緩衝
+     */
+    constructor(buf = 0) {
         this.rw_ = new RW<T>(Math.floor(buf))
     }
     /**
@@ -48,8 +57,11 @@ export class Chan<T> implements ReadChannel<T>, WriteChannel<T> {
     read(): IteratorResult<T> | Promise<IteratorResult<T>> {
         const rw = this.rw_
         const val = rw.tryRead()
-        if (!val.done) {
+        if (val === undefined) {
             // chan 已經關閉
+            return NoResult
+        } else if (!val.done) {
+            // 返回讀取到的值
             return val
         }
         return new Promise((resolve) => {
@@ -78,8 +90,8 @@ export class Chan<T> implements ReadChannel<T>, WriteChannel<T> {
     /**
      * 關閉通道，此後通道將無法寫入，所有阻塞的讀寫都返回，但已經寫入通道的值會保證可以被完全讀取
      */
-    close() {
-        this.rw_.close()
+    close(): boolean {
+        return this.rw_.close()
     }
     /**
     * 返回通道是否被關閉
@@ -88,21 +100,63 @@ export class Chan<T> implements ReadChannel<T>, WriteChannel<T> {
         return this.rw_.isClosed
     }
 }
-
+// 一個環形緩衝區
+class Ring<T> {
+    private offset_ = 0
+    private size_ = 0
+    constructor(private readonly arrs: Array<T>) {
+    }
+    push(val: T): boolean {
+        const arrs = this.arrs
+        const size = this.size_
+        if (size == arrs.length) {
+            return false
+        }
+        arrs[(this.offset_ + size) % arrs.length] = val
+        this.size_++
+        return true
+    }
+    pop(): IteratorResult<T> {
+        const size = this.size_
+        if (size == 0) {
+            return NoResult
+        }
+        const val = this.arrs[this.offset_++]
+        if (this.offset_ == this.arrs.length) {
+            this.offset_ = 0
+        }
+        this.size_--
+        return {
+            value: val,
+        }
+    }
+}
 class RW<T>{
-    constructor(buf: number) { }
+    private list: Ring<T> | undefined
+    constructor(buf: number) {
+        if (buf > 0) {
+            this.list = new Ring<T>(new Array<T>(buf))
+        }
+    }
     private r_ = new Reader()
     private w_ = new Writer()
-    tryRead(): IteratorResult<any> {
+    tryRead(): IteratorResult<any> | undefined {
         // 讀取緩存
+        const list = this.list
+        if (list) {
+            const result = list.pop()
+            if (!result.done) {
+                return result
+            }
+        }
 
         // 是否關閉
         if (this.isClosed) {
-            return NoResult
+            return
         }
         // 讀取 writer
         const w = this.w_
-        if (w.isEmpty) {
+        if (w.isEmpty) { // 沒有寫入者
             return NoResult
         }
         return {
@@ -118,10 +172,9 @@ class RW<T>{
             return
         }
         const r = this.r_
-        if (r.isEmpty) {
+        if (r.isEmpty) { // 沒有讀取者
             // 寫入緩存
-
-            return false
+            return this.list?.push(val) ?? false
         }
         r.invoke({
             value: val,
@@ -132,13 +185,14 @@ class RW<T>{
         // 設置待寫
         return this.w_.connect(callback, val)
     }
-    close() {
+    close(): boolean {
         if (this.isClosed) {
-            return
+            return false
         }
         this.isClosed = true
         this.w_.close()
         this.r_.close()
+        return true
     }
     isClosed = false
 }
