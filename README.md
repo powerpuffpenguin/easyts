@@ -12,7 +12,7 @@ The original and core content of this library is to implement golang's chan and 
 First you can install the library using npm
 
 ```
-npm -i @king011/easyts
+npm install @king011/easyts
 ```
 
 This library is packaged with multiple target versions in the installation directory. You can choose the version to import according to your environment.
@@ -100,5 +100,39 @@ main()
 You can use selectChan function to wait for multiple chan: [(golang)](https://go.dev/tour/concurrency/5)
 
 ```
+import { selectChan } from "@king011/easyts"
+import { Chan, WriteChannel, ReadChannel } from "@king011/easyts/lib/es2022/core/channel"
 
+async function fibonacci(c: WriteChannel<number>, quit: ReadChannel<void>) {
+    let x = 0, y = 1
+    while (true) {
+        // Create a write case
+        const wc = c.writeCase(x)
+        // Create a read case
+        const qc = quit.readCase()
+
+        // select will block until a case is processed, then return this case
+        switch (await selectChan(wc, qc)) {
+            case wc:
+                [x, y] = [y, x + y]
+                break
+            case qc:
+                // The read function of the case will return the read value, which is an IteratorResult<T>
+                console.log('quit', `doen=${qc.read().done}`)
+                return
+        }
+    }
+}
+async function main() {
+    const c = new Chan<number>()
+    const quit = new Chan<void>();
+    (async () => {
+        for (let i = 0; i < 10; i++) {
+            console.log((await c.read())?.value)
+        }
+        quit.close()
+    })()
+    fibonacci(c, quit)
+}
+main()
 ```

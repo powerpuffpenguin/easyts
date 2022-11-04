@@ -12,7 +12,7 @@ js library written with ts
 首先你可以使用 npm 安裝本庫
 
 ```
-npm -i @king011/easyts
+npm install @king011/easyts
 ```
 
 本庫在安裝目錄下分別打包了多個目標版本，你可以依據自己的環境選擇要 import 的版本
@@ -101,5 +101,39 @@ main()
 你可以使用 selectChan 函數等待多個 chan: [(golang)](https://go.dev/tour/concurrency/5)
 
 ```
+import { selectChan } from "@king011/easyts"
+import { Chan, WriteChannel, ReadChannel } from "@king011/easyts/lib/es2022/core/channel"
 
+async function fibonacci(c: WriteChannel<number>, quit: ReadChannel<void>) {
+    let x = 0, y = 1
+    while (true) {
+        // 創建一個 寫入 case
+        const wc = c.writeCase(x)
+        // 創建一個 讀取 case
+        const qc = quit.readCase()
+
+        // select 會阻塞直到 某個 case 被處理，就返回此 case
+        switch (await selectChan(wc, qc)) {
+            case wc:
+                [x, y] = [y, x + y]
+                break
+            case qc:
+                // case 的 read 函數會返回讀取到的值，它是一個 IteratorResult<T>
+                console.log('quit', `doen=${qc.read().done}`)
+                return
+        }
+    }
+}
+async function main() {
+    const c = new Chan<number>()
+    const quit = new Chan<void>();
+    (async () => {
+        for (let i = 0; i < 10; i++) {
+            console.log((await c.read())?.value)
+        }
+        quit.close()
+    })()
+    fibonacci(c, quit)
+}
+main()
 ```

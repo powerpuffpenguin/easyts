@@ -1,6 +1,6 @@
 {
   "name": "@king011/easyts",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "js library written with ts",
   "scripts": {
     "test": "qunit lib/es5/index_test.js && qunit lib/es6/index_test.js && qunit lib/es2022/index_test.js",

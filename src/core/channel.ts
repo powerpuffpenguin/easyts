@@ -485,6 +485,40 @@ class WirteValue {
         this.p.disconet(this)
     }
 }
+export interface CaseLike {
+    toString(): string
+    /**
+     * 重置 讀寫狀態
+     * @internal
+     */
+    reset(): void
+    /*
+    * @internal
+    */
+    tryInvoke(): boolean
+    /*
+    * @internal
+    */
+    do(resolve: (c: CaseLike) => void, reject: (c: CaseLike) => void): Connection
+    /*
+    * @internal
+    */
+    invoke(): Promise<void>
+    /**
+     * 返回 case 讀取到的值，如果 case 沒有就緒或者這不是一個 讀取 case 將拋出 異常
+     * @returns 
+     */
+    read(): IteratorResult<any>
+    /**
+     * 返回 case 是否寫入成功，如果 case 沒有就緒或者這不是一個 寫入 case 將拋出異常
+     * @returns 
+     */
+    write(): boolean
+    /**
+     * 返回 此 case 是否就緒
+     */
+    readonly isReady: boolean
+}
 export class Case<T>{
     /**
     * @internal
@@ -492,10 +526,10 @@ export class Case<T>{
     static make<T>(ch: Chan<T>, r: boolean, val?: any, exception?: boolean): Case<T> {
         return new Case<T>(ch, r, val, exception)
     }
-    private constructor(public readonly ch: Chan<T>,
-        public readonly r: boolean,
-        public readonly val?: any,
-        public readonly exception?: boolean,
+    private constructor(private readonly ch: Chan<T>,
+        private readonly r: boolean,
+        private readonly val?: any,
+        private readonly exception?: boolean,
     ) {
     }
     toString(): string {
@@ -534,7 +568,10 @@ export class Case<T>{
             return this._tryWrite()
         }
     }
-    do(resolve: (c: Case<any>) => void, reject: (c: Case<any>) => void): Connection {
+    /*
+    * @internal
+    */
+    do(resolve: (c: CaseLike) => void, reject: (c: CaseLike) => void): Connection {
         const rw = this.ch.rw
         if (this.r) {
             return rw.read((val) => {
@@ -641,7 +678,7 @@ export class Case<T>{
  * @param cases 
  * @returns 返回就緒的 case，如果傳入了 undefined，則當沒有任何 case 就緒時返回 undefined ，如果沒有傳入 undefined 且 沒有 case 就緒 則返回 Promise 用於等待第一個就緒的 case
  */
-export function selectChan(...cases: Array<Case<any> | undefined>): Promise<Case<any>> | Case<any> | undefined {
+export function selectChan(...cases: Array<CaseLike | undefined>): Promise<CaseLike> | CaseLike | undefined {
     if (cases.length == 0) {
         // 沒有傳入 case 所以 select 用於阻塞
         return neverPromise
@@ -670,14 +707,14 @@ export function selectChan(...cases: Array<Case<any> | undefined>): Promise<Case
         return
     } else if (cases.length == 1) {
         // 只有一個 case
-        const c = cases[0] as Case<any>
+        const c = cases[0] as CaseLike
         return c.invoke().then(() => {
             return c
         })
     }
     // 存在多個 case
     return new Promise((resolve, reject) => {
-        const arrs = cases as Array<Case<any>>
+        const arrs = cases as Array<CaseLike>
         const conns = new Array<Connection>(arrs.length)
         for (let i = 0; i < arrs.length; i++) {
             conns[i] = arrs[i].do((c) => {

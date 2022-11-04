@@ -144,17 +144,30 @@ export declare class Chan<T> implements ReadChannel<T>, WriteChannel<T> {
      */
     [Symbol.asyncIterator](): AsyncGenerator<T>;
 }
-interface Connection {
-    disconet(): void;
+export interface CaseLike {
+    toString(): string;
+    /**
+     * 返回 case 讀取到的值，如果 case 沒有就緒或者這不是一個 讀取 case 將拋出 異常
+     * @returns
+     */
+    read(): IteratorResult<any>;
+    /**
+     * 返回 case 是否寫入成功，如果 case 沒有就緒或者這不是一個 寫入 case 將拋出異常
+     * @returns
+     */
+    write(): boolean;
+    /**
+     * 返回 此 case 是否就緒
+     */
+    readonly isReady: boolean;
 }
 export declare class Case<T> {
-    readonly ch: Chan<T>;
-    readonly r: boolean;
-    readonly val?: any;
-    readonly exception?: boolean | undefined;
+    private readonly ch;
+    private readonly r;
+    private readonly val?;
+    private readonly exception?;
     private constructor();
     toString(): string;
-    do(resolve: (c: Case<any>) => void, reject: (c: Case<any>) => void): Connection;
     private _tryWrite;
     private _tryRead;
     private read_?;
@@ -179,5 +192,4 @@ export declare class Case<T> {
  * @param cases
  * @returns 返回就緒的 case，如果傳入了 undefined，則當沒有任何 case 就緒時返回 undefined ，如果沒有傳入 undefined 且 沒有 case 就緒 則返回 Promise 用於等待第一個就緒的 case
  */
-export declare function selectChan(...cases: Array<Case<any> | undefined>): Promise<Case<any>> | Case<any> | undefined;
-export {};
+export declare function selectChan(...cases: Array<CaseLike | undefined>): Promise<CaseLike> | CaseLike | undefined;
