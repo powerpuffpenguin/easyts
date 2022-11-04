@@ -1,6 +1,6 @@
 {
   "name": "@king011/easyts",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "js library written with ts",
   "scripts": {
     "test": "qunit lib/es5/index_test.js && qunit lib/es6/index_test.js && qunit lib/es2022/index_test.js",
@@ -24,5 +24,15 @@
   "devDependencies": {
     "@types/qunit": "^2.19.3",
     "qunit": "^2.19.3"
-  }
+  },
+  "keywords": [
+    "channel",
+    "select",
+    "go",
+    "go-channle",
+    "go-select",
+    "golang",
+    "golang-channle",
+    "golang-select"
+  ]
 }
