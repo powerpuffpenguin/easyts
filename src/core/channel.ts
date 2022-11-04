@@ -32,6 +32,19 @@ export interface ReadChannel<T> {
      * 創建一個供 select 讀取的 case
      */
     readCase(): Case<T>
+    /**
+     * 返回已緩衝數量
+     */
+    readonly length: number
+    /**
+     * 返回緩衝大小
+     */
+    readonly capacity: number
+
+    /**
+     * 實現異步迭代器
+     */
+    [Symbol.asyncIterator](): AsyncGenerator<T>
 }
 /**
  * 一個只寫的通道
@@ -66,6 +79,14 @@ export interface WriteChannel<T> {
      * @param exception 如果在寫入時通道已經關閉，設置此值爲 true 將拋出異常，設置此值爲 false 將返回 false|Promise.resolve(false)
      */
     writeCase(val: T, exception?: boolean): Case<T>
+    /**
+     * 返回已緩衝數量
+     */
+    readonly length: number
+    /**
+     * 返回緩衝大小
+     */
+    readonly capacity: number
 }
 export interface Channel<T> extends ReadChannel<T>, WriteChannel<T> { }
 export class Chan<T> implements ReadChannel<T>, WriteChannel<T> {
@@ -186,12 +207,42 @@ export class Chan<T> implements ReadChannel<T>, WriteChannel<T> {
     writeCase(val: T, exception?: boolean): Case<T> {
         return Case.make(this, false, val, exception)
     }
+    /**
+     * 返回已緩衝數量
+     */
+    get length(): number {
+        return this.rw.length
+    }
+    /**
+     * 返回緩衝大小
+     */
+    get capacity(): number {
+        return this.rw.capacity
+    }
+    /**
+     * 實現 異步 讀取 迭代器
+     */
+    async *[Symbol.asyncIterator](): AsyncGenerator<T> {
+        while (true) {
+            const val = await this.read()
+            if (val.done) {
+                break
+            }
+            yield val.value
+        }
+    }
 }
 // 一個環形緩衝區
 class Ring<T> {
     private offset_ = 0
     private size_ = 0
     constructor(private readonly arrs: Array<T>) {
+    }
+    get length(): number {
+        return this.size_
+    }
+    get capacity(): number {
+        return this.arrs.length
     }
     push(val: T): boolean {
         const arrs = this.arrs
@@ -282,6 +333,12 @@ class RW<T>{
         return true
     }
     isClosed = false
+    get length(): number {
+        return this.list?.length ?? 0
+    }
+    get capacity(): number {
+        return this.list?.capacity ?? 0
+    }
 }
 /**
  * 打亂數組

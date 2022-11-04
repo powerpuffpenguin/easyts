@@ -1,5 +1,5 @@
 {
-  "name": "easyts",
+  "name": "@king011/easyts",
   "version": "0.0.1",
   "description": "js library written with ts",
   "scripts": {
@@ -10,6 +10,7 @@
     "es2022": "tsc -t es2022 --outDir lib/es2022",
     "build": "tsc -t es5 --outDir lib/es5 && tsc -t es6 --outDir lib/es6 && tsc -t es2022 --outDir lib/es2022"
   },
+  "main": "lib/es6/index.js",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/powerpuffpenguin/easyts.git"

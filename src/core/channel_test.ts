@@ -115,7 +115,6 @@ QUnit.module('chan', hooks => {
     })
     QUnit.test('rw', async (assert) => {
         const signals = assert.async(1)
-        assert.true(true)
         try {
             const ch0 = new Chan<number>()
             let r0 = ch0.readCase()
@@ -147,6 +146,38 @@ QUnit.module('chan', hooks => {
                     assert.false(s.write())
                 }
             }
+        } finally {
+            signals()
+        }
+    })
+    QUnit.test('asyncIterator', async (assert) => {
+        const signals = assert.async(1)
+        try {
+            let c0 = new Chan<number>()
+            setTimeout(async () => {
+                for (let i = 0; i < 3; i++) {
+                    await c0.write(i + 1)
+                }
+                c0.close()
+            }, 0)
+            let sum = 0
+            for await (const v of c0) {
+                sum += v
+            }
+            assert.equal(sum, 1 + 2 + 3)
+
+            c0 = new Chan<number>(2)
+            setTimeout(async () => {
+                for (let i = 0; i < 3; i++) {
+                    await c0.write(i + 1)
+                }
+                c0.close()
+            }, 0)
+            sum = 0
+            for await (const v of c0) {
+                sum += v
+            }
+            assert.equal(sum, 1 + 2 + 3)
         } finally {
             signals()
         }
