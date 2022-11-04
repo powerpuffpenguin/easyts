@@ -137,3 +137,69 @@ async function main() {
 }
 main()
 ```
+
+## default
+
+通過將 undefined 傳入 selectChan 函數，可以在沒有 chan 準備好時，執行 default 邏輯。此時 selectChan 會 返回 undefined: [(golang)](https://go.dev/tour/concurrency/6)
+
+```
+const c = ch.readCase()
+// 因爲 undefined 存在所以不可能阻塞故不需要 await
+switch (selectChan(undefined, c)) {
+    case c:
+        // 使用 c.read().value 來獲取讀取到的值
+        break
+    case undefined:
+        // 從 c 接收會阻塞
+        break
+}
+```
+
+下面是一個具體的示例：
+```
+import { Chan, WriteChannel, ReadChannel, selectChan } from "@king011/easyts/lib/es2022/core/channel"
+
+function sleep(ms: number): Promise<void> {
+    return new Promise((resolve) => {
+        setTimeout(resolve, ms)
+    })
+}
+function makeTick(ms: number): ReadChannel<Date> {
+    const ch = new Chan<Date>();
+    (async () => {
+        while (true) {
+            await sleep(ms)
+            await ch.write(new Date())
+        }
+    })()
+    return ch
+}
+function makeAfter(ms: number): ReadChannel<Date> {
+    const ch = new Chan<Date>()
+    sleep(ms).then(() => {
+        ch.write(new Date())
+    })
+    return ch
+}
+async function main() {
+    const tick = makeTick(100)
+    const boom = makeAfter(500)
+    while (true) {
+        const cc = tick.readCase()
+        const bc = boom.readCase()
+        switch (selectChan(undefined, cc, bc)) {
+            case cc:
+                console.log('tick.')
+                break
+            case bc:
+                console.log('BOOM!')
+                return
+            default: // case undefined:
+                console.log('    .')
+                await sleep(50)
+                break
+        }
+    }
+}
+main()
+```

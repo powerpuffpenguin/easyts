@@ -136,3 +136,69 @@ async function main() {
 }
 main()
 ```
+## default
+
+By passing undefined to the selectChan function, the default logic can be executed when no chan is ready. At this point selectChan will return undefined: [(golang)](https://go.dev/tour/concurrency/6)
+
+```
+const c = ch.readCase()
+// Because undefined exists, it is impossible to block so there is no need for await
+switch (selectChan(undefined, c)) {
+    case c:
+        // use c.read().value to get the read value
+        break
+    case undefined:
+        // receiving from c would block
+        break
+}
+```
+
+Here is a concrete example:
+
+```
+import { Chan, WriteChannel, ReadChannel, selectChan } from "@king011/easyts/lib/es2022/core/channel"
+
+function sleep(ms: number): Promise<void> {
+    return new Promise((resolve) => {
+        setTimeout(resolve, ms)
+    })
+}
+function makeTick(ms: number): ReadChannel<Date> {
+    const ch = new Chan<Date>();
+    (async () => {
+        while (true) {
+            await sleep(ms)
+            await ch.write(new Date())
+        }
+    })()
+    return ch
+}
+function makeAfter(ms: number): ReadChannel<Date> {
+    const ch = new Chan<Date>()
+    sleep(ms).then(() => {
+        ch.write(new Date())
+    })
+    return ch
+}
+async function main() {
+    const tick = makeTick(100)
+    const boom = makeAfter(500)
+    while (true) {
+        const cc = tick.readCase()
+        const bc = boom.readCase()
+        switch (selectChan(undefined, cc, bc)) {
+            case cc:
+                console.log('tick.')
+                break
+            case bc:
+                console.log('BOOM!')
+                return
+            default: // case undefined:
+                console.log('    .')
+                await sleep(50)
+                break
+        }
+    }
+}
+main()
+```
