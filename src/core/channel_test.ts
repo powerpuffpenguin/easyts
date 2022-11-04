@@ -1,4 +1,4 @@
-import { Chan } from "./channel"
+import { Chan, selectChan } from "./channel"
 
 QUnit.module('chan', hooks => {
     QUnit.test('no buffer', async (assert) => {
@@ -89,4 +89,67 @@ QUnit.module('chan', hooks => {
             signals()
         }
     })
+
+    QUnit.test('select', async (assert) => {
+        const signals = assert.async(1)
+        try {
+            const ch0 = new Chan<number>()
+            const ch1 = new Chan<number>()
+            let r0 = ch0.readCase()
+            assert.strictEqual(undefined, selectChan(r0, undefined))
+            let w1 = ch1.writeCase(1)
+            setTimeout(() => {
+                assert.true(ch0.write(12))
+            }, 0)
+            assert.strictEqual(await selectChan(r0, w1), r0)
+            assert.strictEqual(r0.read().value, 12)
+
+            setTimeout(() => {
+                ch1.close()
+            }, 0)
+            assert.strictEqual(await selectChan(w1), w1)
+            assert.false(w1.write())
+        } finally {
+            signals()
+        }
+    })
+    QUnit.test('rw', async (assert) => {
+        const signals = assert.async(1)
+        assert.true(true)
+        try {
+            const ch0 = new Chan<number>()
+            let r0 = ch0.readCase()
+            let w0 = ch0.writeCase(1)
+            setTimeout(() => {
+                assert.equal((ch0.read() as IteratorResult<any>).value, 1)
+            }, 0)
+            assert.equal(w0, await selectChan(r0, w0))
+            assert.true(w0.write())
+
+            setTimeout(() => {
+                assert.true(ch0.write(100))
+            }, 0)
+            assert.equal(r0, await selectChan(r0, w0))
+            assert.equal(r0.read().value, 100)
+
+            assert.false(ch0.isClosed)
+            assert.true(ch0.close())
+            assert.true(ch0.isClosed)
+            assert.false(ch0.close())
+            let flag = 0x0
+            while (flag != 3) {
+                const s = selectChan(r0, w0)
+                if (s == r0) {
+                    flag |= 0x1
+                    assert.true(s.read().done)
+                } else if (s == w0) {
+                    flag |= 0x2
+                    assert.false(s.write())
+                }
+            }
+        } finally {
+            signals()
+        }
+    })
 })
+

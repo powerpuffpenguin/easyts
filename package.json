@@ -3,8 +3,12 @@
   "version": "0.0.1",
   "description": "js library written with ts",
   "scripts": {
-    "test": "tsc && qunit lib/index_test.js",
-    "build": "tsc"
+    "test": "qunit lib/es5/index_test.js && qunit lib/es6/index_test.js && qunit lib/es2022/index_test.js",
+    "bt": "tsc -t es2022 --outDir lib/es2022 && qunit lib/es2022/index_test.js",
+    "es5": "tsc -t es5 --outDir lib/es5",
+    "es6": "tsc -t es6 --outDir lib/es6",
+    "es2022": "tsc -t es2022 --outDir lib/es2022",
+    "build": "tsc -t es5 --outDir lib/es5 && tsc -t es6 --outDir lib/es6 && tsc -t es2022 --outDir lib/es2022"
   },
   "repository": {
     "type": "git",
