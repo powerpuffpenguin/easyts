@@ -3,9 +3,16 @@ js library written with ts
 
 [English](README.md)
 
-本喵深受 dart 和 golang 的荼毒，dart 和 golang 裏面有一些很有趣的東西可以極大的簡化編程，然而在寫 js 時無法使用這些因爲沒有庫去提供支持。另外 js 通常用於前端代碼一些 golang 裏面的特性估計等到天荒地老 js 也不會支持，但本喵中毒太深已經離不開goalng 的工作模式於是寫了這個庫。
+本喵深受 dart 和 golang 的荼毒，dart 和 golang 裏面有一些很有趣的東西可以極大的簡化編程，然而在寫 js 時無法使用這些因爲沒有庫去提供支持。另外 js 通常用於前端代碼一些 golang 裏面的特性估計等到天荒地老 js 也不會支持，但本喵中毒太深已經離不開golang 的工作模式於是寫了這個庫。
 
 本庫最初和核心內容是要實現 golang 的 chan 和 select ，此外也會偶爾增加一些其它各種工具函數用於各種趣事
+
+* [安裝](#安裝)
+* [快速開始](#快速開始)
+    * [緩衝](#緩衝)
+    * [關閉 和 for range](#關閉-和-for-range)
+    * [select](#select)
+    * [default](#default)
 
 # 安裝
 
@@ -23,7 +30,7 @@ npm install @king011/easyts
 
 # 快速開始
 
-chan 和 select 有多好用相信不用解釋，不然我們也不會一起尋找在js中使用它的方法。如果對其概念和注意點有不清除的地方，請去查詢 goalng 的相信介紹，本庫的使用方法邏輯都和 golang 類似。
+chan 和 select 有多好用相信不用解釋，不然我們也不會一起尋找在js中使用它的方法。如果對其概念和注意點有不清除的地方，請去查詢 golang 的相關介紹，本庫的使用方法邏輯都和 golang 類似。
 
 直接來看代碼如何創建 chan 和傳遞 數據: [(golang)](https://go.dev/tour/concurrency/2)
 
@@ -46,7 +53,7 @@ async function main() {
     const [x, y] = [await c.read(), await c.read()] // 從 c 中接收
 
     // 這裏和 golang 稍有點差別，golang 從語法上支持了兩種接收值的方式，其中 接收兩個返回值的方式用於 判斷 chan 是否關閉
-    // 作爲 js 庫，無法提供語法上的變量，爲了功能的完整採用了返回 IteratorResult 的方式來獲取值
+    // 作爲 js 庫，無法提供語法上的便利，爲了功能的完整採用了返回 IteratorResult 的方式來獲取值
     console.log(x.value, y.value, x.value + y.value)
 }
 main()

@@ -3,9 +3,16 @@ js library written with ts
 
 [中文](README.zh.md)
 
-I am deeply poisoned by dart and golang. There are some interesting things in dart and golang that can greatly simplify programming. However, when writing js, I can't use these because there is no library to provide support. In addition, js is usually used for front-end code. Some features in golang are estimated that js will never support. But I have been inseparable from the working mode of goalng, so I wrote this library.
+I am deeply poisoned by dart and golang. There are some interesting things in dart and golang that can greatly simplify programming. However, when writing js, I can't use these because there is no library to provide support. In addition, js is usually used for front-end code. Some features in golang are estimated that js will never support. But I have been inseparable from the working mode of golang, so I wrote this library.
 
 The original and core content of this library is to implement golang's chan and select, and occasionally add some other various tool functions for various interesting things
+
+* [Install](#Install)
+* [Quick start](#Quick-start)
+    * [buffered](#buffered)
+    * [close And for range](#close-And-for-range)
+    * [select](#select)
+    * [default](#default)
 
 # Install
 
@@ -23,7 +30,7 @@ This library is packaged with multiple target versions in the installation direc
 
 # Quick start
 
-I believe there is no need to explain how useful chan and select are, otherwise we would not be looking for ways to use it in js together. If there is something unclear about its concepts and points of attention, please check the introduction of goalng. The usage logic of this library is similar to that of golang.
+I believe there is no need to explain how useful chan and select are, otherwise we would not be looking for ways to use it in js together. If there is something unclear about its concepts and points of attention, please check the introduction of golang. The usage logic of this library is similar to that of golang.
 
 Just look at how the code creates chan and passes data: [(golang)](https://go.dev/tour/concurrency/2)
 
