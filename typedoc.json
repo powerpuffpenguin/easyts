@@ -1,0 +1,8 @@
+{
+    "entryPointStrategy": "expand",
+    "entryPoints": [
+        "src/core.ts",
+        "src/container.ts",
+    ],
+    "out": "docs"
+}
