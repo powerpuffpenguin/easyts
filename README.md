@@ -13,7 +13,7 @@ The original and core content of this library is to implement golang's chan and 
     * [close And for range](#close-And-for-range)
     * [select](#select)
     * [default](#default)
-* [api](api/api.md)
+* [api](https://powerpuffpenguin.github.io/ts/easyts/)
 
 # Install
 

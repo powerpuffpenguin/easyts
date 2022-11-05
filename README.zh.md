@@ -13,7 +13,7 @@ js library written with ts
     * [關閉 和 for range](#關閉-和-for-range)
     * [select](#select)
     * [default](#default)
-* [api](api/api.zh.md)
+* [api](https://powerpuffpenguin.github.io/ts/easyts/)
 
 # 安裝
 
