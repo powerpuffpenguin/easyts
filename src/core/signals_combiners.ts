@@ -1,7 +1,7 @@
 import { Combiner, Slot } from "./signals"
 
 /**
- * 一個合併器的例子 用於獲取所有插槽的返回值之和
+ * An example of a combiner to get the sum of the return values of all slots
  */
 export class SumCombiner implements Combiner<number, number> {
     private sum_ = 0
@@ -25,17 +25,17 @@ export class SumCombiner implements Combiner<number, number> {
 }
 export interface FilterValue<T> {
     /**
-     * 傳遞給插槽的值
+     * the value passed to the slot
      */
     value: T
     /**
-     * 如果設置爲 false 則將停止後續插槽的調用
+     * If set to false will stop subsequent slot calls
      */
     next: boolean
 }
 export type FilterCallback<T> = (val: FilterValue<T>, i: number, solt: Slot<T, any>) => void
 /**
- * 一個合併器的例子 在將參數傳遞給插槽前對參數進行處理，並可確定是否要繼續調用後續插槽
+ * An example of a combiner that processes arguments before passing them to a slot and can determine whether to continue calling subsequent slots
  */
 export class FilterCombiner<T> implements Combiner<T, void>{
     constructor(public readonly pipe: FilterCallback<T>) { }
