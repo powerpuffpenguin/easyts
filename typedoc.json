@@ -4,5 +4,5 @@
         "src/core.ts",
         "src/container.ts",
     ],
-    "out": "docs"
+    "out": "pages/easyts"
 }

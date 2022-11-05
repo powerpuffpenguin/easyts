@@ -1,0 +1,3 @@
+[submodule "powerpuffpenguin.github.io"]
+	path = powerpuffpenguin.github.io
+	url = git@github.com:powerpuffpenguin/powerpuffpenguin.github.io.git
