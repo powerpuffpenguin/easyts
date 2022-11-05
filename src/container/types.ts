@@ -1,5 +1,4 @@
-import { Exception } from "../core/exception"
-
+import { Exception } from "../core/exception";
 /**
  * Exceptions thrown by container operations
  */
@@ -8,20 +7,57 @@ export class ContainerException extends Exception { }
  * The container has reached the capacity limit and cannot add new data
  */
 export const errBadAdd = new ContainerException('The container has reached the capacity limit and cannot add new data')
+export const errNoData = new ContainerException('not found any data')
+/**
+ * iterator is invalid
+ */
+export const errIteratorInvalid = new ContainerException('Iterator is invalid')
+
+/**
+ * Cannot append data after end iterator
+ */
+export const errAfterEnd = new ContainerException('Cannot append data after end iterator')
+
+/**
+ * Iterator begin and end do not match
+ */
+export const errRangeNotMatched = new ContainerException('[begin,end) not matched')
+
+/**
+* Iterator range is invalid
+*/
+export const errBadRange = new ContainerException('[begin,end) range is invalid')
+
+/**
+ * Iterator position is invalid
+ * 
+ * @remarks
+ * 
+ */
+export const errPositionInvalid = new ContainerException('Iterator position is invalid')
 
 /**
  * An extended iterator that provides more functionality than js iterators
  */
-export interface ExpandIterator<T> {
+export interface ExpandIterator<T> extends Iterable<T> {
     /**
      * Set the value of the iteration position
      * @param v 
+     * 
+     * @throws {@link errIteratorInvalid}
      */
     set(v: T): void
     /**
      * Returns the value at the iteration position
+     * 
+     * @throws {@link errIteratorInvalid}
      */
     get(): T
+
+    /**
+     * true if this is a reverse iterator, false otherwise
+     */
+    get r(): boolean
 
     /**
      * Whether the iterator is valid, operation on an invalid iterator, the behavior will be undefined
@@ -38,14 +74,34 @@ export interface ExpandIterator<T> {
      * Returns a new iterator to point to the previous element
      */
     prev(): ExpandIterator<T>
+
+    /**
+     * Use js iterator to iterate the container from the current position
+     */
+    [Symbol.iterator](): Iterator<T>
+
+    /**
+     * Returns the container to which the iterator belongs
+     * 
+     * @returns if deleted will return undefined
+     * 
+     */
+    get c(): Container<T> | undefined
+
+    /**
+     * Returns true if both iterations point to the same position
+     * @param o 
+     */
+    same(o: ExpandIterator<T>): boolean
 }
+
 /**
  * container interface
  * 
  * @remarks
  * Describes the methods and properties that all containers have
  */
-export interface Container<T> {
+export interface Container<T> extends Iterable<T> {
     /**
      * Returns the current amount of data in the container
      */
@@ -90,22 +146,9 @@ export interface Container<T> {
      */
     clear(): void
     /**
-     * implement js iterator
-     */
-    [Symbol.iterator](): Iterator<T>
-    /**
      * Returns an object that implements a js iterator, but it traverses the data in reverse
      */
     get reverse(): Iterable<T>
-
-    /**
-     * Returns the expanded iterator
-     */
-    get iterator(): ExpandIterator<T>
-    /**
-     * Returns the expanded iterator but traverses the container in reverse
-     */
-    get reverseIterator(): ExpandIterator<T>
 
     /**
      * Call the callback in turn for each data in the container
@@ -142,4 +185,71 @@ export interface Container<T> {
     * @throws {@link errBadAdd}
     */
     pushFront(...vals: Array<T>): void
+
+    /**
+     * remove the first element from the container
+     * 
+     * @throws {@link errNoData} 
+     */
+    popBack(): T
+    /**
+    * remove the last element from the container
+    * 
+    * @throws {@link errNoData} 
+    */
+    popFront(): T
+    /**
+    * Returns the first element in the container
+    * 
+    * @throws {@link errNoData} 
+    */
+    get first(): T
+    /**
+    * Returns the last element in the container
+    * 
+    * @throws {@link errNoData} 
+    */
+    get last(): T
+
+    /**
+     * delete the data pointed to by the iterator
+     */
+    erase(iterator: ExpandIterator<T>): void
+
+    /**
+     * append data after iterator position
+     * @param iterator 
+     * @param vals 
+     * 
+     * @throws {@link errAfterEnd}
+     */
+    after(iterator: ExpandIterator<T>, ...vals: Array<T>): void
+    /**
+     * append data before iterator position
+     * @param iterator 
+     * @param vals 
+     */
+    before(iterator: ExpandIterator<T>, ...vals: Array<T>): void
+
+    /**
+     * Returns the start position of the forward extended iterator
+     */
+    begin(): ExpandIterator<T>
+    /**
+     * Returns the forward extended iterator end position
+     */
+    end(): ExpandIterator<T>
+    /**
+     * Returns the start position of the extended iterator in reverse
+     */
+    rbegin(): ExpandIterator<T>
+    /**
+     * Returns the end position of the extended iterator in reverse
+     */
+    rend(): ExpandIterator<T>
+
+    /**
+     * Returns true if it is an iterator of the current container, otherwise returns false
+     */
+    own(it: ExpandIterator<T>): boolean
 }
