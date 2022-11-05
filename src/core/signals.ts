@@ -197,7 +197,7 @@ export class Signals<T, TR> {
     }
 }
 /**
- * Signals/Slots ,可以將多個 Slots 與 Signals 關聯，當 Signals 產生信號時 Slots 會被依次調用
+ * Signals/Slots, you can associate multiple Slots with Signals, when Signals generate signals, Slots will be called in turn
  */
 export interface Slot<T, TR> {
     slot(val: T): TR
