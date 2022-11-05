@@ -1,97 +1,159 @@
 import { Exception } from "./exception"
-import { VoidCallback } from "./types"
 import { neverPromise, noResult } from "./values"
 
+/**
+ * Exceptions thrown by Channel operations
+ */
 export class ChannelException extends Exception { }
-export const errClosed = new ChannelException('write on closed channel')
-export const errNotChan = new ChannelException("argument 'chan' not extends from class 'Chan'")
-export const errWriterEmpty = new ChannelException('Writer empty')
-export const errReaderEmpty = new ChannelException('Reader empty')
-export const errWriteCase = new ChannelException('case not ready or unreadable')
-export const errReadCase = new ChannelException('case not ready or unreadable')
+/**
+ * Thrown when writing to a closed channel
+ */
+export const errChannelClosed = new ChannelException('write on closed channel')
+const errChannelWriterEmpty = new ChannelException('Writer empty')
+const errChannelReaderEmpty = new ChannelException('Reader empty')
+/**
+ * Thrown when case is not writable or not ready
+ */
+export const errChanneWriteCase = new ChannelException('case not ready or unwritable')
+/**
+ * Thrown when case is not readable or not ready
+ */
+export const errChanneReadCase = new ChannelException('case not ready or unreadable')
 
 /**
- * 一個只讀的通道
+ * a read-only channel
  */
 export interface ReadChannel<T> {
     /**
-     * 從通道中讀取一個值,如果沒有值可讀則阻塞直到有值會通道被關閉
+     * Read a value from the channel, block if there is no value to read, and return until there is a value or the channel is closed
      */
     read(): IteratorResult<T> | Promise<IteratorResult<T>>
     /**
-   * 嘗試從管道中讀取一個值，如果沒有值可讀將返回 undefined,，如果管道已經關閉將返回 {done:true}
-   * @returns 
-   */
+     * Attempts to read a value from the channel, returns undefined if no value is readable, returns \{done:true\} if the channel is closed
+     */
     tryRead(): IteratorResult<T> | undefined
     /**
-     * 返回通道是否被關閉
+     * Returns whether the channel is closed
      */
     readonly isClosed: boolean
 
     /**
-     * 創建一個供 select 讀取的 case
+     * Create a case for select to read
      */
     readCase(): Case<T>
     /**
-     * 返回已緩衝數量
+     * Returns the channel buffer size
      */
     readonly length: number
     /**
-     * 返回緩衝大小
+     * Returns how much data the channel has buffered
      */
     readonly capacity: number
 
     /**
-     * 實現異步迭代器
+     * Implement asynchronous iterators
      */
     [Symbol.asyncIterator](): AsyncGenerator<T>
 }
 /**
- * 一個只寫的通道
+ * a write-only channel
  */
 export interface WriteChannel<T> {
     /**
-      * 向通道寫入一個值,如果通道不可寫則阻塞直到通道可寫或被關閉
-      * @param val
-      * @param exception 如果在寫入時通道已經關閉，設置此值爲 true 將拋出異常，設置此值爲 false 將返回 false|Promise.resolve(false)
-      * @returns 是否寫入成功，通常只有在通道關閉時才會寫入失敗
+      * Writes a value to the channel, blocking if the channel is not writable until the channel is writable or closed
+      * @param val value to write
+      * @param exception If set to true, writing to a closed channel will throw an exception
+      * @returns Returns true if the write is successful, false otherwise this is usually because the channel has been closed
+      *       
+      * @throws ChannelException
+      * Writing a value to a closed channel will throw errChannelClosed
       */
     write(val: T, exception?: boolean): boolean | Promise<boolean>
     /**
-      * 嘗試向通道寫入一個值,如果通道不可寫則返回 false
-      * @param val
-      * @param exception 如果在寫入時通道已經關閉，設置此值爲 true 將拋出異常，設置此值爲 false 將返回 false
-      * @returns 是否寫入成功，通道關閉或不可寫都會返回 false
-      */
+     * Attempt to write a value to the channel
+     * @param val value to write
+     * @param exception If set to true, writing to a closed channel will throw an exception
+    * @returns Returns true if the write is successful
+    * 
+    * @throws ChannelException
+    * Writing a value to a closed channel will throw errChannelClosed
+    */
     tryWrite(val: T, exception?: boolean): boolean
     /**
-     * 關閉通道，此後通道將無法寫入，所有阻塞的讀寫都返回，但已經寫入通道的值會保證可以被完全讀取
-     * @returns 如果通道已經被關閉返回false，否則關閉通道並返回true
+     * Close the channel, after which the channel will not be able to write, all blocked reads and writes are returned, but the value that has been written to the channel is guaranteed to be fully read
+     * @returns Returns false if the channel has been closed, otherwise closes the channel and returns true
      */
     close(): boolean
     /**
-     * 返回通道是否被關閉
+     * Returns whether the channel is closed
      */
     readonly isClosed: boolean
-
     /**
-     * 創建一個供 select 寫入的 case
-     * @param exception 如果在寫入時通道已經關閉，設置此值爲 true 將拋出異常，設置此值爲 false 將返回 false|Promise.resolve(false)
-     */
+    * Create a case for select to write to
+    * @param val value to write
+    * @param exception If set to true, writing to a closed channel will throw an exception
+    * 
+    * @throws ChannelException
+    * Writing a value to a closed channel, select will throw errChannelClosed
+    */
     writeCase(val: T, exception?: boolean): Case<T>
     /**
-     * 返回已緩衝數量
+     * Returns the channel buffer size
      */
     readonly length: number
     /**
-     * 返回緩衝大小
+     * Returns how much data the channel has buffered
      */
     readonly capacity: number
 }
+/**
+ * Read-write bidirectional channel
+ */
 export interface Channel<T> extends ReadChannel<T>, WriteChannel<T> { }
+/**
+ * The concrete realization of Channel
+ * @sealed
+ * 
+ * @example use
+ * ```
+ * function sum(s: Array<number>, c: WriteChannel<number>) {
+ *     let sum = 0
+ *     for (const v of s) {
+ *         sum += v
+ *     }
+ *     c.write(sum) // send sum to c
+ * }
+ * async function main() {
+ *     const s = [7, 2, 8, -9, 4, 0]
+ *     const c = new Chan<number>()
+ *     sum(s.slice(0, s.length / 2), c)
+ *     sum(s.slice(s.length / 2), c)
+ * 
+ *     const [x, y] = [await c.read(), await c.read()] // receive from c
+ * 
+ *     console.log(x.value, y.value, x.value + y.value)
+ * }
+ * main()
+ * ```
+ * 
+ * @example buffered
+ * ```
+ *     const ch = new Chan<number>(2)
+ *     ch.write(1)
+ *     ch.write(2)
+ *     let v = ch.read() as IteratorResult<number>
+ *     console.log(v.value)
+ *     v = ch.read() as IteratorResult<number>
+ *     console.log(v.value)
+ * ```
+ */
 export class Chan<T> implements ReadChannel<T>, WriteChannel<T> {
+    /**
+     * Low-level read and write implementation
+     * @internal
+     */
     private rw_: RW<T>
-    /*
+    /**
     * @internal
     */
     get rw(): RW<T> {
@@ -99,14 +161,14 @@ export class Chan<T> implements ReadChannel<T>, WriteChannel<T> {
     }
     /**
      * 
-     * @param buf 緩衝大小，如果大於0 則爲 通道啓用緩衝
+     * @params buffered size, if greater than 0 enable buffering for the channel
      */
     constructor(buf = 0) {
         this.rw_ = new RW<T>(Math.floor(buf))
     }
     /**
-    * 從通道中讀取一個值,如果沒有值可讀則阻塞直到有值會通道被關閉
-    */
+     * Read a value from the channel, block if there is no value to read, and return until there is a value or the channel is closed
+     */
     read(): IteratorResult<T> | Promise<IteratorResult<T>> {
         const rw = this.rw_
         const val = rw.tryRead()
@@ -122,8 +184,7 @@ export class Chan<T> implements ReadChannel<T>, WriteChannel<T> {
         })
     }
     /**
-     * 嘗試從管道中讀取一個值，如果沒有值可讀將返回 undefined,，如果管道已經關閉將返回 {done:true}
-     * @returns 
+     * Attempts to read a value from the channel, returns undefined if no value is readable, returns \{done:true\} if the channel is closed
      */
     tryRead(): IteratorResult<T> | undefined {
         const rw = this.rw_
@@ -138,10 +199,13 @@ export class Chan<T> implements ReadChannel<T>, WriteChannel<T> {
         return undefined
     }
     /**
-      * 向通道寫入一個值,如果通道不可寫則阻塞直到通道可寫或被關閉
-      * @param val
-      * @param exception 如果在寫入時通道已經關閉，設置此值爲 true 將拋出異常，設置此值爲 false 將返回 false|Promise.resolve(false)
-      * @returns 是否寫入成功，通常只有在通道關閉時才會寫入失敗
+      * Writes a value to the channel, blocking if the channel is not writable until the channel is writable or closed
+      * @param val value to write
+      * @param exception If set to true, writing to a closed channel will throw an exception
+      * @returns Returns true if the write is successful, false otherwise this is usually because the channel has been closed
+      *       
+      * @throws ChannelException
+      * Writing a value to a closed channel will throw errChannelClosed
       */
     write(val: T, exception?: boolean): boolean | Promise<boolean> {
         const rw = this.rw_
@@ -149,7 +213,7 @@ export class Chan<T> implements ReadChannel<T>, WriteChannel<T> {
         if (result === undefined) {
             // chan 已經關閉
             if (exception) {
-                throw errClosed
+                throw errChannelClosed
             }
             return false
         } else if (result) {
@@ -161,18 +225,21 @@ export class Chan<T> implements ReadChannel<T>, WriteChannel<T> {
         })
     }
     /**
-     * 嘗試向通道寫入一個值,如果通道不可寫則返回 false
-     * @param val
-     * @param exception 如果在寫入時通道已經關閉，設置此值爲 true 將拋出異常，設置此值爲 false 將返回 false
-     * @returns 是否寫入成功，通道關閉或不可寫都會返回 false
-     */
+     * Attempt to write a value to the channel
+     * @param val value to write
+     * @param exception If set to true, writing to a closed channel will throw an exception
+    * @returns Returns true if the write is successful
+    * 
+    * @throws ChannelException
+    * Writing a value to a closed channel will throw errChannelClosed
+    */
     tryWrite(val: T, exception?: boolean): boolean {
         const rw = this.rw_
         const result = rw.tryWrite(val)
         if (result === undefined) {
             // chan 已經關閉
             if (exception) {
-                throw errClosed
+                throw errChannelClosed
             }
             return false
         } else if (result) {
@@ -183,44 +250,49 @@ export class Chan<T> implements ReadChannel<T>, WriteChannel<T> {
         return false
     }
     /**
-     * 關閉通道，此後通道將無法寫入，所有阻塞的讀寫都返回，但已經寫入通道的值會保證可以被完全讀取
+     * Close the channel, after which the channel will not be able to write, all blocked reads and writes are returned, but the value that has been written to the channel is guaranteed to be fully read
+     * @returns Returns false if the channel has been closed, otherwise closes the channel and returns true
      */
     close(): boolean {
         return this.rw_.close()
     }
     /**
-    * 返回通道是否被關閉
-    */
-    get isClosed(): boolean {
-        return this.rw_.isClosed
-    }
-    /**
-     * 創建一個供 select 讀取的 case
+     * Create a case for select to read
      */
     readCase(): Case<T> {
         return Case.make(this, true)
     }
     /**
-     * 創建一個供 select 寫入的 case
-    * @param exception 如果在寫入時通道已經關閉，設置此值爲 true 將拋出異常，設置此值爲 false 將返回 false|Promise.resolve(false)
-     */
+    * Create a case for select to write to
+    * @param val value to write
+    * @param exception If set to true, writing to a closed channel will throw an exception
+    * 
+    * @throws ChannelException
+    * Writing a value to a closed channel, select will throw errChannelClosed
+    */
     writeCase(val: T, exception?: boolean): Case<T> {
         return Case.make(this, false, val, exception)
     }
     /**
-     * 返回已緩衝數量
+     * Returns whether the channel is closed
+     */
+    get isClosed(): boolean {
+        return this.rw_.isClosed
+    }
+    /**
+     * Returns the channel buffer size
      */
     get length(): number {
         return this.rw.length
     }
     /**
-     * 返回緩衝大小
+     * Returns how much data the channel has buffered
      */
     get capacity(): number {
         return this.rw.capacity
     }
     /**
-     * 實現 異步 讀取 迭代器
+     * Implement asynchronous iterators
      */
     async *[Symbol.asyncIterator](): AsyncGenerator<T> {
         while (true) {
@@ -232,7 +304,11 @@ export class Chan<T> implements ReadChannel<T>, WriteChannel<T> {
         }
     }
 }
-// 一個環形緩衝區
+/**
+ * a ring buffer
+ * 
+ * @internal
+ */
 class Ring<T> {
     private offset_ = 0
     private size_ = 0
@@ -269,6 +345,9 @@ class Ring<T> {
         }
     }
 }
+/**
+ * @internal
+ */
 class RW<T>{
     private list: Ring<T> | undefined
     constructor(buf: number) {
@@ -341,7 +420,7 @@ class RW<T>{
     }
 }
 /**
- * 打亂數組
+ * shuffle the array
  * @param arrs 
  * @returns 
  */
@@ -368,7 +447,7 @@ class Reader {
     invoke(val: IteratorResult<any>) {
         const vals = this.vals
         if (vals.length == 0) {
-            throw errReaderEmpty
+            throw errChannelReaderEmpty
         } else if (vals.length > 1) {
             shuffle(vals)
         }
@@ -402,6 +481,7 @@ class Reader {
         }
     }
 }
+
 interface Connection {
     disconet(): void
 }
@@ -425,7 +505,7 @@ class Writer {
     invoke() {
         const vals = this.vals
         if (vals.length == 0) {
-            throw errWriterEmpty
+            throw errChannelWriterEmpty
         } else if (vals.length > 1) {
             shuffle(vals)
         }
@@ -474,7 +554,7 @@ class WirteValue {
         const reject = this.reject
         if (reject) {
             try {
-                reject(errClosed)
+                reject(errChannelClosed)
             } catch (_) {
             }
         } else {
@@ -488,37 +568,39 @@ class WirteValue {
 export interface CaseLike {
     toString(): string
     /**
-     * 重置 讀寫狀態
+     * reset read-write status
      * @internal
      */
     reset(): void
-    /*
+    /**
     * @internal
     */
     tryInvoke(): boolean
-    /*
+    /**
     * @internal
     */
     do(resolve: (c: CaseLike) => void, reject: (c: CaseLike) => void): Connection
-    /*
+    /**
     * @internal
     */
     invoke(): Promise<void>
     /**
-     * 返回 case 讀取到的值，如果 case 沒有就緒或者這不是一個 讀取 case 將拋出 異常
-     * @returns 
+     * Returns the value read by the case, throws an exception if the case is not ready or this is not a read case
      */
     read(): IteratorResult<any>
     /**
-     * 返回 case 是否寫入成功，如果 case 沒有就緒或者這不是一個 寫入 case 將拋出異常
-     * @returns 
+     * Returns whether the case was written successfully, throws an exception if the case is not ready or this is not a write case
      */
     write(): boolean
     /**
-     * 返回 此 case 是否就緒
+     * Returns whether this case is ready
      */
     readonly isReady: boolean
 }
+/**
+ * 
+ * @sealed
+ */
 export class Case<T>{
     /**
     * @internal
@@ -548,7 +630,7 @@ export class Case<T>{
         }
     }
     /**
-     * 重置 讀寫狀態
+     * reset read-write status
      * @internal
      */
     reset() {
@@ -558,7 +640,7 @@ export class Case<T>{
             this.write_ = undefined
         }
     }
-    /*
+    /**
     * @internal
     */
     tryInvoke(): boolean {
@@ -568,7 +650,7 @@ export class Case<T>{
             return this._tryWrite()
         }
     }
-    /*
+    /**
     * @internal
     */
     do(resolve: (c: CaseLike) => void, reject: (c: CaseLike) => void): Connection {
@@ -593,7 +675,7 @@ export class Case<T>{
             }, undefined, this.val)
         }
     }
-    /*
+    /**
     * @internal
     */
     invoke(): Promise<void> {
@@ -613,7 +695,7 @@ export class Case<T>{
                     } else {
                         this.write_ = false
                         if (this.exception) {
-                            reject(errClosed)
+                            reject(errChannelClosed)
                             return
                         }
                     }
@@ -644,40 +726,75 @@ export class Case<T>{
     }
     private read_?: IteratorResult<T>
     /**
-     * 返回 case 讀取到的值，如果 case 沒有就緒或者這不是一個 讀取 case 將拋出 異常
-     * @returns 
+     * Returns the value read by the case, throws an exception if the case is not ready or this is not a read case
      */
     read(): IteratorResult<T> {
         const val = this.read_
         if (val === undefined) {
-            throw errReadCase
+            throw errChanneReadCase
         }
         return val
     }
     private write_?: boolean
     /**
-     * 返回 case 是否寫入成功，如果 case 沒有就緒或者這不是一個 寫入 case 將拋出異常
-     * @returns 
+     * Returns whether the case was written successfully, throws an exception if the case is not ready or this is not a write case
      */
     write(): boolean {
         const val = this.write_
         if (val === undefined) {
-            throw errWriteCase
+            throw errChanneWriteCase
         }
         return val
     }
     /**
-     * 返回 此 case 是否就緒
+     * Returns whether this case is ready
      */
     get isReady(): boolean {
         return this.r ? this.read_ !== undefined : this.write_ !== undefined
     }
 }
 /**
- * 等待一個 case 完成
- * @param cases 
- * @returns 返回就緒的 case，如果傳入了 undefined，則當沒有任何 case 就緒時返回 undefined ，如果沒有傳入 undefined 且 沒有 case 就緒 則返回 Promise 用於等待第一個就緒的 case
+ * wait for a case to complete
+ * 
+ * @remarks Return a ready case, return undefined when no case is ready
+ * 
+ * @example
+ * ```
+ * const c0 = a.readCase()
+ * const c1= b.writeCase()
+ * const c2 = c.readCase()
+ * switch (await selectChan(c0, c1,c2)) {
+ *     case c0:
+ *         break
+ *     case c1:
+ *         break
+ *     case c2:
+ *         break
+ * }
+ * ```
+ * 
+ * @example default
+ * ```
+ * const c0 = c.readCase()
+ * switch (selectChan(undefined, c0)) {
+ *     case c0:
+ *         break
+ *     case undefined:
+ *         break
+ * }
+ * ```
  */
+export function selectChan(def: undefined, ...cases: Array<CaseLike>): CaseLike | undefined;
+/**
+ * wait for a case to complete
+ * 
+ * @remarks Return a ready case, if no case is ready, return Promise to wait for the first ready case
+ */
+export function selectChan(...cases: Array<CaseLike>): Promise<CaseLike> | CaseLike;
+/**
+ * returns an Promise that waits forever
+ */
+export function selectChan(): Promise<any>;
 export function selectChan(...cases: Array<CaseLike | undefined>): Promise<CaseLike> | CaseLike | undefined {
     if (cases.length == 0) {
         // 沒有傳入 case 所以 select 用於阻塞
@@ -726,7 +843,7 @@ export function selectChan(...cases: Array<CaseLike | undefined>): Promise<CaseL
                 for (let i = 0; i < conns.length; i++) {
                     conns[i].disconet()
                 }
-                reject(errClosed)
+                reject(errChannelClosed)
             })
         }
     })

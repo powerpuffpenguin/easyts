@@ -1,4 +1,4 @@
-import { Chan, selectChan } from "./channel"
+import { Chan, selectChan, WriteChannel } from "./channel"
 
 QUnit.module('chan', hooks => {
     QUnit.test('no buffer', async (assert) => {
@@ -96,7 +96,7 @@ QUnit.module('chan', hooks => {
             const ch0 = new Chan<number>()
             const ch1 = new Chan<number>()
             let r0 = ch0.readCase()
-            assert.strictEqual(undefined, selectChan(r0, undefined))
+            assert.strictEqual(undefined, selectChan(undefined, r0))
             let w1 = ch1.writeCase(1)
             setTimeout(() => {
                 assert.true(ch0.write(12))

@@ -4,5 +4,5 @@
         "src/core.ts",
         "src/container.ts",
     ],
-    "out": "pages/easyts"
+    "out": "powerpuffpenguin.github.io/ts/easyts"
 }
