@@ -9,7 +9,7 @@ export class ContainerException extends Exception { }
  */
 export const errBadAdd = new ContainerException('The container has reached the capacity limit and cannot add new data')
 export const errEmpty = new ContainerException('The container is empty')
-
+export const errIteratorInvalid = new ContainerException('The iterator is invalid')
 
 /**
  * container interface
