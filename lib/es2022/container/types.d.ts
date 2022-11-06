@@ -1,4 +1,5 @@
 import { Exception } from "../core/exception";
+import { ValueCallback, MapCallback, CloneCallback, CompareCallback, Swappable, Comparable, ValidCallback } from "../core/types";
 /**
  * Exceptions thrown by container operations
  */
@@ -8,62 +9,14 @@ export declare class ContainerException extends Exception {
  * The container has reached the capacity limit and cannot add new data
  */
 export declare const errBadAdd: ContainerException;
-/**
- * iterator is invalid
- */
-export declare const errIteratorInvalid: ContainerException;
-/**
-* iterator is invalid, usually because the container is empty
-*/
-export declare const errNoData: ContainerException;
-/**
- * An extended iterator that provides more functionality than js iterators
- */
-export interface ExpandIterator<T> extends Iterable<T> {
-    /**
-     * Set the value of the iteration position
-     * @param v
-     *
-     * @throws {@link errIteratorInvalid}
-     */
-    set(v: T): void;
-    /**
-     * Returns the value at the iteration position
-     *
-     * @throws {@link errIteratorInvalid}
-     */
-    get(): T;
-    /**
-     * Whether the iterator is valid, operation on an invalid iterator, the behavior will be undefined
-     *
-     * @remarks
-     * For example, deleting the element of the iterator will invalidate the iterator, and it will return an invalid iterator after traversing the container
-     */
-    readonly ok: boolean;
-    /**
-     * Returns a new iterator to point to the next element
-     */
-    next(): ExpandIterator<T>;
-    /**
-     * Returns a new iterator to point to the previous element
-     */
-    prev(): ExpandIterator<T>;
-    /**
-     * Use js iterator to iterate the container from the current position
-     */
-    [Symbol.iterator](): Iterator<T>;
-}
-/**
- * an invalid iterator to indicate the end of the iteration
- */
-export declare const endIterator: ExpandIterator<any>;
+export declare const errEmpty: ContainerException;
 /**
  * container interface
  *
  * @remarks
  * Describes the methods and properties that all containers have
  */
-export interface Container<T> extends Iterable<T> {
+export interface Container<T> extends Swappable<T>, Comparable<T> {
     /**
      * Returns the current amount of data in the container
      */
@@ -91,52 +44,59 @@ export interface Container<T> extends Iterable<T> {
     /**
      * Swap data in two containers
      *
-     * @throws {@link errBadAdd}
      */
     swap(o: Container<T>): void;
     /**
      * Create a full copy of the container
+     * @param callback How to create a duplicate copy of an element
      */
-    clone(): Container<T>;
-    /**
-     * Returns true if the data depth of the two containers is consistent, and if the container data defines the equal function, the equal function will be called to compare the equality.
-     * @param o
-     */
-    equal(o: Container<T>): boolean;
+    clone(callback?: CloneCallback<T>): Container<T>;
     /**
      * Empty the data in the container
      */
     clear(): void;
     /**
-     * Returns an object that implements a js iterator, but it traverses the data in reverse
+     * Returns true if the data depth of the two containers is consistent
+     * @param o
+     */
+    compareTo(o: Container<T>, callback?: CompareCallback<T>): number;
+    /**
+     * Returns a js iterator
+     *
+     * @param reverse The iterator returned if true will traverse the container in reverse order
+     */
+    iterator(reverse?: boolean): Iterator<T>;
+    /**
+     * Returns an object that implements a js Iterable
+     */
+    get iterable(): Iterable<T>;
+    /**
+     * Returns an object that implements a js Iterable, but it traverses the data in reverse
      */
     get reverse(): Iterable<T>;
     /**
-     * Returns the expanded iterator
-     */
-    get iterator(): ExpandIterator<T>;
-    /**
-     * Returns the expanded iterator but traverses the container in reverse
-     */
-    get reverseIterator(): ExpandIterator<T>;
-    /**
-     * Call the callback in turn for each data in the container
+     * call callback on each element in the container in turn
      * @param callback
+     * @param reverse If true, traverse the container in reverse order
      */
-    forEach(callback: (data: T) => void): void;
+    forEach(callback: ValueCallback<T>, reverse?: boolean): void;
     /**
-    * Call callback in turn (reverse) for each data in the container
-    * @param callback
-    */
-    reverseForEach(callback: (data: T) => void): void;
+     * Traverse the container looking for elements until the callback returns true, then stop looking
+     * @param callback Determine whether it is the element to be found
+     * @param reverse If true, traverse the container in reverse order
+     * @returns whether the element was found
+     */
+    find(callback: ValidCallback<T>, reverse?: boolean): boolean;
     /**
      * Convert container to array
+     * @param callback
+     * @param reverse If true, traverse the container in reverse order
      */
-    map<To>(f: (data: T) => To): Array<To>;
+    map<TO>(callback: MapCallback<T, TO>, reverse?: boolean): Array<TO>;
     /**
-    * Convert container to reverse array
-    */
-    reverseMap<To>(f: (data: T) => To): Array<To>;
+     * Returns whether the data data exists in the container
+     */
+    has(data: T, reverse?: boolean, callback?: CompareCallback<T>): boolean;
     /**
      * add element to the end of the container
      * @param vals
@@ -154,29 +114,86 @@ export interface Container<T> extends Iterable<T> {
     /**
      * remove the first element from the container
      *
-     * @throws {@link errNoData}
+     * @throws {@link errEmpty}
      */
     popBack(): T;
     /**
     * remove the last element from the container
     *
-    * @throws {@link errNoData}
+    * @throws {@link errEmpty}
     */
     popFront(): T;
     /**
     * Returns the first element in the container
     *
-    * @throws {@link errNoData}
+    * @throws {@link errEmpty}
     */
-    get first(): T;
+    get front(): T;
     /**
     * Returns the last element in the container
     *
-    * @throws {@link errNoData}
+    * @throws {@link errEmpty}
     */
-    get last(): T;
+    get back(): T;
+}
+/**
+ * Containers should all be derived from this class, so that some algorithms can recognize containers and optimize for them
+ */
+export declare class Basic<T> {
     /**
-     * delete the data pointed to by the iterator
+     * Returns the current amount of data in the container
+     * @virtual
      */
-    erase(begin: ExpandIterator<T>, end?: ExpandIterator<T>): void;
+    get length(): number;
+    /**
+     * Returns a js iterator
+     * @param reverse The iterator returned if true will traverse the container in reverse order
+     * @virtual
+     *
+     */
+    iterator(reverse?: boolean): Iterator<T>;
+    /**
+     * Returns true if the data depth of the two containers is consistent
+     * @param o
+     */
+    compareTo(o: Container<T>, callback?: CompareCallback<T>): number;
+    /**
+     * Returns an object that implements a js Iterable
+     * @sealedl
+     */
+    get iterable(): Iterable<T>;
+    /**
+     * Returns an object that implements a js Iterable, but it traverses the data in reverse
+     * @sealed
+     */
+    get reverse(): Iterable<T>;
+    /**
+     * call callback on each element in the container in turn
+     * @param callback
+     * @param reverse If true, traverse the container in reverse order
+     *
+     * @virtual
+     */
+    forEach(callback: ValueCallback<T>, reverse?: boolean): void;
+    /**
+     * Traverse the container looking for elements until the callback returns true, then stop looking
+     * @param callback Determine whether it is the element to be found
+     * @param reverse If true, traverse the container in reverse order
+     * @returns whether the element was found
+     */
+    find(callback: ValidCallback<T>, reverse?: boolean): boolean;
+    /**
+     * Convert container to array
+     * @param callback
+     * @param reverse If true, traverse the container in reverse order
+     *
+     * @virtual
+     */
+    map<TO>(callback: MapCallback<T, TO>, reverse?: boolean): Array<TO>;
+    /**
+     * Returns whether the data data exists in the container
+     *
+     * @virtual
+     */
+    has(data: T, reverse?: boolean, callback?: CompareCallback<T>): boolean;
 }

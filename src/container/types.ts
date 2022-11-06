@@ -1,4 +1,6 @@
+import { noResult } from "../core";
 import { Exception } from "../core/exception";
+import { ValueCallback, MapCallback, CloneCallback, CompareCallback, Swappable, Comparable, compare, ValidCallback } from "../core/types";
 /**
  * Exceptions thrown by container operations
  */
@@ -7,93 +9,8 @@ export class ContainerException extends Exception { }
  * The container has reached the capacity limit and cannot add new data
  */
 export const errBadAdd = new ContainerException('The container has reached the capacity limit and cannot add new data')
-export const errNoData = new ContainerException('not found any data')
-/**
- * iterator is invalid
- */
-export const errIteratorInvalid = new ContainerException('Iterator is invalid')
+export const errEmpty = new ContainerException('The container is empty')
 
-/**
- * Cannot append data after end iterator
- */
-export const errAfterEnd = new ContainerException('Cannot append data after end iterator')
-
-/**
- * Iterator begin and end do not match
- */
-export const errRangeNotMatched = new ContainerException('[begin,end) not matched')
-
-/**
-* Iterator range is invalid
-*/
-export const errBadRange = new ContainerException('[begin,end) range is invalid')
-
-/**
- * Iterator position is invalid
- * 
- * @remarks
- * 
- */
-export const errPositionInvalid = new ContainerException('Iterator position is invalid')
-
-/**
- * An extended iterator that provides more functionality than js iterators
- */
-export interface ExpandIterator<T> extends Iterable<T> {
-    /**
-     * Set the value of the iteration position
-     * @param v 
-     * 
-     * @throws {@link errIteratorInvalid}
-     */
-    set(v: T): void
-    /**
-     * Returns the value at the iteration position
-     * 
-     * @throws {@link errIteratorInvalid}
-     */
-    get(): T
-
-    /**
-     * true if this is a reverse iterator, false otherwise
-     */
-    get r(): boolean
-
-    /**
-     * Whether the iterator is valid, operation on an invalid iterator, the behavior will be undefined
-     * 
-     * @remarks
-     * For example, deleting the element of the iterator will invalidate the iterator, and it will return an invalid iterator after traversing the container
-     */
-    readonly ok: boolean
-    /**
-     * Returns a new iterator to point to the next element
-     */
-    next(): ExpandIterator<T>
-    /**
-     * Returns a new iterator to point to the previous element
-     */
-    prev(): ExpandIterator<T>
-
-    /**
-     * Use js iterator to iterate the container from the current position
-     */
-    [Symbol.iterator](): Iterator<T>
-
-    /**
-     * Returns the container to which the iterator belongs
-     * 
-     * @returns if deleted will return undefined
-     * 
-     */
-    get c(): Container<T> | undefined
-
-    /**
-     * Returns true if both iterations point to the same position
-     * @param o 
-     */
-    same(o: ExpandIterator<T>): boolean
-}
 
 /**
  * container interface
@@ -101,7 +18,7 @@ export interface ExpandIterator<T> extends Iterable<T> {
  * @remarks
  * Describes the methods and properties that all containers have
  */
-export interface Container<T> extends Iterable<T> {
+export interface Container<T> extends Swappable<T>, Comparable<T> {
     /**
      * Returns the current amount of data in the container
      */
@@ -129,47 +46,62 @@ export interface Container<T> extends Iterable<T> {
     /**
      * Swap data in two containers
      * 
-     * @throws {@link errBadAdd}
      */
     swap(o: Container<T>): void
     /**
      * Create a full copy of the container
+     * @param callback How to create a duplicate copy of an element 
      */
-    clone(): Container<T>
-    /**
-     * Returns true if the data depth of the two containers is consistent, and if the container data defines the equal function, the equal function will be called to compare the equality.
-     * @param o 
-     */
-    equal(o: Container<T>): boolean
+    clone(callback?: CloneCallback<T>): Container<T>
     /**
      * Empty the data in the container
      */
     clear(): void
     /**
-     * Returns an object that implements a js iterator, but it traverses the data in reverse
+     * Returns true if the data depth of the two containers is consistent
+     * @param o 
+     */
+    compareTo(o: Container<T>, callback?: CompareCallback<T>): number
+
+    /**
+     * Returns a js iterator
+     * 
+     * @param reverse The iterator returned if true will traverse the container in reverse order
+     */
+    iterator(reverse?: boolean): Iterator<T>;
+    /**
+     * Returns an object that implements a js Iterable
+     */
+    get iterable(): Iterable<T>;
+    /**
+     * Returns an object that implements a js Iterable, but it traverses the data in reverse
      */
     get reverse(): Iterable<T>
-
     /**
-     * Call the callback in turn for each data in the container
+     * call callback on each element in the container in turn
      * @param callback 
+     * @param reverse If true, traverse the container in reverse order
      */
-    forEach(callback: (data: T) => void): void
-    /**
-    * Call callback in turn (reverse) for each data in the container
-    * @param callback 
-    */
-    reverseForEach(callback: (data: T) => void): void
+    forEach(callback: ValueCallback<T>, reverse?: boolean): void
 
+    /**
+     * Traverse the container looking for elements until the callback returns true, then stop looking
+     * @param callback Determine whether it is the element to be found
+     * @param reverse If true, traverse the container in reverse order
+     * @returns whether the element was found
+     */
+    find(callback: ValidCallback<T>, reverse?: boolean): boolean
     /**
      * Convert container to array
+     * @param callback 
+     * @param reverse If true, traverse the container in reverse order
      */
-    map<To>(f: (data: T) => To): Array<To>
-
+    map<TO>(callback: MapCallback<T, TO>, reverse?: boolean): Array<TO>
     /**
-    * Convert container to reverse array
-    */
-    reverseMap<To>(f: (data: T) => To): Array<To>
+     * Returns whether the data data exists in the container
+     */
+    has(data: T, reverse?: boolean, callback?: CompareCallback<T>): boolean
+
 
     /**
      * add element to the end of the container
@@ -189,67 +121,160 @@ export interface Container<T> extends Iterable<T> {
     /**
      * remove the first element from the container
      * 
-     * @throws {@link errNoData} 
+     * @throws {@link errEmpty} 
      */
     popBack(): T
     /**
     * remove the last element from the container
     * 
-    * @throws {@link errNoData} 
+    * @throws {@link errEmpty} 
     */
     popFront(): T
     /**
     * Returns the first element in the container
     * 
-    * @throws {@link errNoData} 
+    * @throws {@link errEmpty} 
     */
-    get first(): T
+    get front(): T
     /**
     * Returns the last element in the container
     * 
-    * @throws {@link errNoData} 
+    * @throws {@link errEmpty} 
     */
-    get last(): T
-
+    get back(): T
+}
+/**
+ * The base class of the container implements some common methods for the container
+ */
+export class Basic<T>{
+    protected constructor() { }
     /**
-     * delete the data pointed to by the iterator
+     * Returns the current amount of data in the container
+     * @virtual
      */
-    erase(iterator: ExpandIterator<T>): void
-
+    get length(): number {
+        throw new ContainerException('function length not implemented')
+    }
     /**
-     * append data after iterator position
-     * @param iterator 
-     * @param vals 
+     * Returns a js iterator
+     * @param reverse The iterator returned if true will traverse the container in reverse order
+     * @virtual
      * 
-     * @throws {@link errAfterEnd}
      */
-    after(iterator: ExpandIterator<T>, ...vals: Array<T>): void
-    /**
-     * append data before iterator position
-     * @param iterator 
-     * @param vals 
-     */
-    before(iterator: ExpandIterator<T>, ...vals: Array<T>): void
+    iterator(reverse?: boolean): Iterator<T> {
+        throw new ContainerException('function iterator not implemented')
+    }
 
     /**
-     * Returns the start position of the forward extended iterator
+     * Returns true if the data depth of the two containers is consistent
+     * @param o 
      */
-    begin(): ExpandIterator<T>
+    compareTo(o: Container<T>, callback?: CompareCallback<T>): number {
+        let l = this.iterator(true)
+        let r = o.iterator(true)
+        while (true) {
+            const v0 = l.next()
+            const v1 = r.next()
+            if (v0.done) {
+                if (!v1.done) {
+                    return -1
+                }
+                break
+            } else if (v1.done) {
+                return 1
+            }
+            const v = compare(v0.value, v1.value, callback)
+            if (v != 0) {
+                return v
+            }
+        }
+        return 0
+    }
     /**
-     * Returns the forward extended iterator end position
+     * Returns an object that implements a js Iterable
+     * @sealedl
      */
-    end(): ExpandIterator<T>
+    get iterable(): Iterable<T> {
+        const i = this.iterator()
+        return {
+            [Symbol.iterator]() {
+                return i
+            }
+        }
+    }
     /**
-     * Returns the start position of the extended iterator in reverse
+     * Returns an object that implements a js Iterable, but it traverses the data in reverse
+     * @sealed
      */
-    rbegin(): ExpandIterator<T>
+    get reverse(): Iterable<T> {
+        const i = this.iterator(true)
+        return {
+            [Symbol.iterator]() {
+                return i
+            }
+        }
+    }
     /**
-     * Returns the end position of the extended iterator in reverse
+     * call callback on each element in the container in turn
+     * @param callback 
+     * @param reverse If true, traverse the container in reverse order
+     * 
+     * @virtual
      */
-    rend(): ExpandIterator<T>
+    forEach(callback: ValueCallback<T>, reverse?: boolean): void {
+        const it = reverse ? this.reverse : this.iterable
+        for (const v of it) {
+            callback(v)
+        }
+    }
+    /**
+     * Traverse the container looking for elements until the callback returns true, then stop looking
+     * @param callback Determine whether it is the element to be found
+     * @param reverse If true, traverse the container in reverse order
+     * @returns whether the element was found
+     */
+    find(callback: ValidCallback<T>, reverse?: boolean): boolean {
+        const it = reverse ? this.reverse : this.iterable
+        for (const v of it) {
+            if (callback(v)) {
+                return true
+            }
+        }
+        return false
+    }
+    /**
+     * Convert container to array
+     * @param callback 
+     * @param reverse If true, traverse the container in reverse order
+     * 
+     * @virtual
+     */
+    map<TO>(callback: MapCallback<T, TO>, reverse?: boolean): Array<TO> {
+        const length = this.length
+        if (length == 0) {
+            return new Array<TO>()
+        }
+        const it = reverse ? this.reverse : this.iterable
+        const result = new Array<TO>(length)
+        let i = 0
+        for (const v of it) {
+            result[i++] = callback(v)
+        }
+        return result
+    }
+    /**
+     * Returns whether the data data exists in the container
+     * 
+     * @virtual
+     */
+    has(data: T, reverse?: boolean, callback?: CompareCallback<T>): boolean {
+        const it = reverse ? this.reverse : this.iterable
+        for (const v of it) {
+            if (compare(data, v, callback) == 0) {
+                return true
+            }
+        }
+        return false
+    }
 
-    /**
-     * Returns true if it is an iterator of the current container, otherwise returns false
-     */
-    own(it: ExpandIterator<T>): boolean
 }
