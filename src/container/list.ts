@@ -359,13 +359,31 @@ export class List<T> extends Basic<T> implements Container<T> {
      * @param mark 
      */
     insertAfter(v: T, mark: ListElement<T>): ListElement<T> {
-        throw 'not implemented'
+        const ele = new ListElement<T>(v)
+        ele.prev = mark
+        ele.next = mark.next
+        mark.next = ele
+
+        if (mark == this.back_) {
+            this.back_ = ele
+        }
+        this.length_++
+        return ele
     }
     /**
      * inserts a new element e with value v immediately before mark and returns e.
      */
     insertBefore(v: T, mark: ListElement<T>): ListElement<T> {
-        throw 'not implemented'
+        const ele = new ListElement<T>(v)
+        ele.prev = mark.prev
+        mark.prev = ele
+        ele.next = mark
+
+        if (mark == this.front_) {
+            this.front_ = ele
+        }
+        this.length_++
+        return ele
     }
     /**
      * moves element e to its new position after mark.
