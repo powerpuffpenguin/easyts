@@ -14,7 +14,7 @@ export class ListElement<T>{
      * @internal
      */
     list_?: ListImpl<T>
-    constructor(list: ListImpl<T>, public data?: T) {
+    constructor(list?: ListImpl<T>, public data?: T) {
         this.list_ = list
     }
     get next(): ListElement<T> | undefined {
@@ -34,6 +34,7 @@ export interface ListOptions<T> extends Options<T> {
 }
 /**
  * The underlying implementation of linked lists
+ * @internal
  */
 class ListImpl<T>{
     /**
@@ -44,35 +45,37 @@ class ListImpl<T>{
         return this.length_
     }
     /**
-     * linked list head
+     * sentinel list element, only &root, root.prev, and root.next are used
      */
-    private front_?: ListElement<T>
-    /**
-     * tail of linked list
-     */
-    private back_?: ListElement<T>
-    constructor(public readonly capacity: number) { }
+    private root: ListElement<T>
+    constructor(public readonly capacity: number) {
+        const root = new ListElement<T>()
+        root.prev_ = root
+        root.next_ = root
+        this.root = root
+    }
 
     clear(): void {
-        let ele = this.front_
+        let ele = this.first()
         if (ele) {
             while (ele) {
                 ele.list_ = undefined
                 ele = ele.next_
             }
-            this.front_ = undefined
-            this.back_ = undefined
+            const root = this.root
+            root.prev_ = root
+            root.next_ = root
             this.length_ = 0
         }
     }
     iterator(reverse?: boolean): Iterator<T> {
         if (reverse) {
-            let current = this.back_
+            let current = this.last()
             return {
                 next() {
                     if (current) {
                         const data = current.data as any
-                        current = current.prev
+                        current = current.prev_
                         return {
                             value: data,
                         }
@@ -81,12 +84,12 @@ class ListImpl<T>{
                 }
             }
         } else {
-            let current = this.front_
+            let current = this.first()
             return {
                 next() {
                     if (current) {
                         const data = current.data as any
-                        current = current.next
+                        current = current.next_
                         return {
                             value: data,
                         }
@@ -104,33 +107,10 @@ class ListImpl<T>{
         if (free < vals.length) {
             throw errBadAdd
         }
-        let front = this.front_
-        if (front) {
-            let back = this.back_ as ListElement<T>
-            for (let i = 0; i < vals.length; i++) {
-                const current = new ListElement<T>(this, vals[i])
-
-                current.prev_ = back
-                back.next_ = current
-
-                back = current
-            }
-            this.back_ = back
-        } else {
-            let back = new ListElement<T>(this, vals[0])
-            this.front_ = back
-
-            for (let i = 1; i < vals.length; i++) {
-                const current = new ListElement<T>(this, vals[i])
-
-                current.prev_ = back
-                back.next_ = current
-
-                back = current
-            }
-            this.back_ = back
+        const root = this.root
+        for (const v of vals) {
+            this.insertValue(v, root.prev_ as any)
         }
-        this.length_ += vals.length
     }
     pushFront(...vals: Array<T>): void {
         if (vals.length == 0) {
@@ -140,109 +120,83 @@ class ListImpl<T>{
         if (free < vals.length) {
             throw errBadAdd
         }
-        let front = this.front_
-        let i = vals.length - 1
-        if (front) {
-            for (; i >= 0; i--) {
-                const current = new ListElement<T>(this, vals[i])
-                current.next_ = front
-                front.prev_ = current
-
-                front = current
-            }
-            this.front_ = front
-        } else {
-            let front = new ListElement<T>(this, vals[i--])
-            this.back_ = front
-            for (; i >= 0; i--) {
-                const current = new ListElement<T>(this, vals[i])
-                current.next_ = front
-                front.prev_ = current
-
-                front = current
-            }
-            this.front_ = front
+        const root = this.root
+        for (let i = vals.length - 1; i >= 0; i--) {
+            this.insertValue(vals[i], root)
         }
-        this.length_ += vals.length
-    }
-    popBack(callback?: ValueCallback<T>): T {
-        const back = this.back_
-        if (!back) {
-            throw errEmpty
-        }
-        this.length_--
-        this.back_ = back.prev
-        if (this.back_) {
-            this.back_.next_ = undefined
-        } else {
-            this.front_ = undefined
-        }
-        back.prev_ = undefined
-        back.list_ = undefined
-        const data = back.data as any
-        if (callback) {
-            callback(data)
-        }
-        return data
-    }
-    popFront(callback?: ValueCallback<T>): T {
-        const front = this.front_
-        if (!front) {
-            throw errEmpty
-        }
-        this.length_--
-        this.front_ = front.next
-        if (this.front_) {
-            this.front_.prev_ = undefined
-        } else {
-            this.back_ = undefined
-        }
-        front.next_ = undefined
-        front.list_ = undefined
-        const data = front.data as any
-        if (callback) {
-            callback(data)
-        }
-        return data
     }
     back(): T {
-        const v = this.back_
-        if (!v) {
+        if (this.length_ == 0) {
             throw errEmpty
         }
-        return v.data as any
+        return (this.root.prev_ as any).data
     }
     front(): T {
-        const v = this.front_
-        if (!v) {
+        if (this.length_ == 0) {
             throw errEmpty
         }
-        return v.data as any
+        return (this.root.next_ as any).data
     }
     first(): ListElement<T> | undefined {
-        return this.front_
+        if (this.length_ == 0) {
+            return
+        }
+        return this.root.next_
     }
     last(): ListElement<T> | undefined {
-        return this.back_
-    }
-    remove(e: ListElement<T>, callback?: ValueCallback<T>): boolean {
-        if (e == this.front_) {
-            this.popFront(callback)
-            return true
-        } else if (e == this.back_) {
-            this.popBack(callback)
-            return true
+        if (this.length_ == 0) {
+            return
         }
-        if (!e.next || !e.prev || this.length_ < 3) {
+        return this.root.prev_
+    }
+    remove(ele: ListElement<T>, callback?: ValueCallback<T>) {
+        (ele.prev_ as ListElement<T>).next_ = ele.next_;
+        (ele.next_ as ListElement<T>).prev_ = ele.prev_;
+        ele.next_ = undefined // avoid memory leaks
+        ele.prev_ = undefined // avoid memory leaks
+        ele.list_ = undefined
+        if (callback) {
+            callback(ele.data as any)
+        }
+    }
+    insert(ele: ListElement<T>, at: ListElement<T>) {
+        ele.prev_ = at
+        ele.next_ = at.next_
+        ele.prev_.next_ = ele;
+        (ele.next_ as ListElement<T>).prev_ = ele
+        this.length_++
+    }
+    insertValue(data: T, at: ListElement<T>): ListElement<T> {
+        const ele = new ListElement(this, data)
+        this.insert(ele, at)
+        return ele
+    }
+    move(ele: ListElement<T>, mark: ListElement<T>): boolean {
+        if (ele == mark) {
             return false
         }
-        this.length_--
-        e.prev.next_ = e.next_
-        e.next.prev_ = e.prev_
-        if (callback) {
-            callback(e.data as any)
-        }
+        (ele.prev_ as any).next_ = ele.next_;
+        (ele.next_ as any).prev_ = ele.prev_;
+
+        ele.prev_ = mark
+        ele.next_ = mark.next_
+        ele.prev_.next_ = ele;
+        (ele.next_ as any).prev_ = ele
         return true
+    }
+    moveToBack(ele: ListElement<T>): boolean {
+        const root = this.root
+        if (root.prev == ele) {
+            return false
+        }
+        return this.move(ele, root.prev as any)
+    }
+    moveToFront(ele: ListElement<T>): boolean {
+        const root = this.root
+        if (root.next == ele) {
+            return false
+        }
+        return this.move(ele, root)
     }
 }
 /**
@@ -253,6 +207,9 @@ export class List<T> extends Basic<T> implements Container<T> {
     protected get opts(): ListOptions<T> {
         return this.opts_
     }
+    /**
+     * @internal
+     */
     private impl_: ListImpl<T>
     /**
      * Returns the current amount of data in the container
@@ -370,7 +327,13 @@ export class List<T> extends Basic<T> implements Container<T> {
      * @throws {@link errEmpty} 
      */
     popBack(callback?: ValueCallback<T>): T {
-        return this.impl_.popBack(callback ?? this.opts.erase)
+        const list = this.impl_
+        const ele = list.last()
+        if (!ele) {
+            throw errEmpty
+        }
+        list.remove(ele, callback ?? this.opts.erase)
+        return ele.data as any
     }
     /**
     * remove the last element from the container
@@ -380,7 +343,13 @@ export class List<T> extends Basic<T> implements Container<T> {
     * @throws {@link errEmpty} 
     */
     popFront(callback?: ValueCallback<T>): T {
-        return this.impl_.popFront(callback ?? this.opts.erase)
+        const list = this.impl_
+        const ele = list.first()
+        if (!ele) {
+            throw errEmpty
+        }
+        list.remove(ele, callback ?? this.opts.erase)
+        return ele.data as any
     }
     /**
     * Returns the last element in the container
@@ -415,70 +384,97 @@ export class List<T> extends Basic<T> implements Container<T> {
     }
     /**
      * Remove element from linked list
-     * @param e  
+     * 
+     * @param ele  the element to remove, if e is not an element of the list do nothing and return false
      */
-    remove(e: ListElement<T>, callback?: ValueCallback<T>): boolean {
-        if (e.list_ !== this.impl_) {
+    remove(ele: ListElement<T>, callback?: ValueCallback<T>): boolean {
+        const list = this.impl_
+        if (list != ele.list_) {
             return false
         }
-        return this.impl_.remove(e, callback ?? this.opts.erase)
+        list.remove(ele, callback ?? this.opts.erase)
+        return true
     }
     /**
      * inserts a new element e with value v immediately after mark and returns e.
-     * @param v 
-     * @param mark 
+     * @param v  data to be inserted
+     * @param mark insert a position mark, if mark is not an element of the list do nothing and return undefined
      */
-    insertAfter(v: T, mark: ListElement<T>): ListElement<T> {
-        // const ele = new ListElement<T>(v)
-        // ele.prev = mark
-        // ele.next = mark.next
-        // mark.next = ele
-
-        // if (mark == this.back_) {
-        //     this.back_ = ele
-        // }
-        // this.length_++
-        // return ele
-        throw 1
+    insertAfter(v: T, mark: ListElement<T>): ListElement<T> | undefined {
+        const list = this.impl_
+        if (list != mark.list_) {
+            return
+        }
+        const ele = new ListElement<T>(list, v)
+        list.insert(ele, mark)
+        return ele
     }
     /**
      * inserts a new element e with value v immediately before mark and returns e.
+     * @param v  data to be inserted
+     * @param mark insert a position mark, if mark is not an element of the list do nothing and return undefined
      */
-    insertBefore(v: T, mark: ListElement<T>): ListElement<T> {
-        // const ele = new ListElement<T>(v)
-        // ele.prev = mark.prev
-        // mark.prev = ele
-        // ele.next = mark
-
-        // if (mark == this.front_) {
-        //     this.front_ = ele
-        // }
-        // this.length_++
-        // return ele
-        throw 1
+    insertBefore(v: T, mark: ListElement<T>): ListElement<T> | undefined {
+        const list = this.impl_
+        if (list != mark.list_) {
+            return
+        }
+        const ele = new ListElement<T>(list, v)
+        list.insert(ele, mark.prev_ as any)
+        return ele
     }
     /**
-     * moves element e to its new position after mark.
+     * Moving ele to after mark, if ele or mark is not a list element, do nothing and return false
+     * @param ele element to move
+     * @param mark position marker to move
+     * @returns Whether the list element has moved
      */
-    moveAfter(e: ListElement<T>, mark: ListElement<T>) {
-        throw 'not implemented'
+    moveAfter(ele: ListElement<T>, mark: ListElement<T>): boolean {
+        const list = this.impl_
+        if (list != ele.list_ ||
+            list != mark.list_ ||
+            ele == mark) {
+            return false
+        }
+        return list.move(ele, mark)
     }
     /**
-     * moves element e to its new position before mark.
+     * Moving ele to before mark, if ele or mark is not a list element, do nothing and return false
+     * @param ele element to move
+     * @param mark position marker to move
+     * @returns Whether the list element has moved
      */
-    moveBefore(e: ListElement<T>, mark: ListElement<T>) {
-        throw 'not implemented'
+    moveBefore(ele: ListElement<T>, mark: ListElement<T>): boolean {
+        const list = this.impl_
+        if (list != ele.list_ ||
+            list != mark.list_ ||
+            ele == mark) {
+            return false
+        }
+        return list.move(ele, mark.prev_ as any)
     }
     /**
-     * moves element e to the back of list 
+     * Moving ele to back, if ele is not a list element, do nothing and return false
+     * @param ele element to move
+     * @returns Whether the list element has moved
      */
-    moveToBack(e: ListElement<T>) {
-        throw 'not implemented'
+    moveToBack(ele: ListElement<T>): boolean {
+        const list = this.impl_
+        if (list != ele.list_) {
+            return false
+        }
+        return list.moveToBack(ele)
     }
     /**
-     * moves element e to the front of list
+     * Moving ele to front, if ele is not a list element, do nothing and return false
+     * @param ele element to move
+     * @returns Whether the list element has moved
      */
-    moveToFront(e: ListElement<T>) {
-        throw 'not implemented'
+    moveToFront(ele: ListElement<T>): boolean {
+        const list = this.impl_
+        if (list != ele.list_) {
+            return false
+        }
+        return list.moveToFront(ele)
     }
 }
