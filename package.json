@@ -1,6 +1,6 @@
 {
   "name": "@king011/easyts",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "description": "js library written with ts",
   "scripts": {
     "docs": "typedoc --plugin none",

@@ -13,6 +13,7 @@ js library written with ts
     * [關閉 和 for range](#關閉-和-for-range)
     * [select](#select)
     * [default](#default)
+    * [bench](#bench)
 * [api](https://powerpuffpenguin.github.io/ts/easyts/)
 
 # 安裝
@@ -211,3 +212,18 @@ async function main() {
 }
 main()
 ```
+
+## bench
+
+在 0.0.6 之前的版本首要問題是解決功能完整性問題， chan 存在一個效能bug，當讀寫併發太高性能會嚴重下降，這是因爲我將併發的讀寫隨機排序後以然一個隨機的讀寫完成，排序佔用了大量cpu時間。在 0.0.6 版本我已經修復了這一問題，現在將爲併發產生一個隨機的數組索引來選取完成對象，當它完成後將其和讀寫數組最後一個元素交換位置後刪除。
+
+下面是一個生成消費模型下的效能測試(消費者固定爲 200 個)
+
+|   easyts  |   golang 1.18 GOMAXPROCS(12)  |   golang 1.18 GOMAXPROCS(1)  |   producer count    | producer write|   total write  |
+|---|---|---|---|---|---|
+|	21ms	|   3.418932ms    |	3.090608ms	|	100	|	100	|	10000	|
+|	105ms	|    31.774022ms   |	13.509742ms	|	100	|	1000	|	100000	|
+|	966ms	|	339.338306ms    |   134.449078ms	|	1000	|	1000	|	1000000	|
+|	4.725s	|	1.67669658s    |   659.809691ms	|	1000	|	5000	|	5000000	|
+|	9.573s	|	3.376229048s    |   1.305668965s	|	1000	|	10000	|	10000000	|
+

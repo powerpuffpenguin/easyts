@@ -13,6 +13,7 @@ The original and core content of this library is to implement golang's chan and 
     * [close And for range](#close-And-for-range)
     * [select](#select)
     * [default](#default)
+    * [bench](#bench)
 * [api](https://powerpuffpenguin.github.io/ts/easyts/)
 
 # Install
@@ -210,3 +211,17 @@ async function main() {
 }
 main()
 ```
+
+## bench
+
+The main problem of versions before 0.0.6 is to solve the problem of functional integrity. There is a performance bug in chan. When the read and write concurrency is too high, the performance will be seriously degraded. This is because I randomly sequence the concurrent read and write, so that a random The read and write are done, and the sorting takes up a lot of cpu time. In version 0.0.6 I have fixed this issue and will now generate a random array index for the concurrency to pick the completion object and when it is done swap it with the last element of the read/write array and delete it.
+
+The following is a performance test under a generative consumption model (consumers are fixed at 200)
+
+|   easyts  |   golang 1.18 GOMAXPROCS(12)  |   golang 1.18 GOMAXPROCS(1)  |   producer count    | producer write|   total write  |
+|---|---|---|---|---|---|
+|	21ms	|   3.418932ms    |	3.090608ms	|	100	|	100	|	10000	|
+|	105ms	|    31.774022ms   |	13.509742ms	|	100	|	1000	|	100000	|
+|	966ms	|	339.338306ms    |   134.449078ms	|	1000	|	1000	|	1000000	|
+|	4.725s	|	1.67669658s    |   659.809691ms	|	1000	|	5000	|	5000000	|
+|	9.573s	|	3.376229048s    |   1.305668965s	|	1000	|	10000	|	10000000	|

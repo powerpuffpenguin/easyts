@@ -446,12 +446,18 @@ class Reader {
     }
     invoke(val: IteratorResult<any>) {
         const vals = this.vals
-        if (vals.length == 0) {
-            throw errChannelReaderEmpty
-        } else if (vals.length > 1) {
-            shuffle(vals)
+        switch (vals.length) {
+            case 0:
+                throw errChannelReaderEmpty
+            case 1:
+                vals.pop()!.invoke(val)
+                return
+        }const last = vals.length - 1
+        const i = Math.floor(Math.random() * vals.length)
+        if (i != last) { //swap to end
+            [vals[i], vals[last]] = [vals[last], vals[i]]
         }
-        vals.pop()?.invoke(val)
+        vals.pop()!.invoke(val)
     }
     close() {
         if (this.closed_) {
@@ -504,10 +510,18 @@ class Writer {
     }
     invoke() {
         const vals = this.vals
-        if (vals.length == 0) {
-            throw errChannelWriterEmpty
-        } else if (vals.length > 1) {
-            shuffle(vals)
+        switch (vals.length) {
+            case 0:
+                throw errChannelWriterEmpty
+            case 1:
+                const p = vals.pop()!
+                p.invoke()
+                return p.value
+        }
+        const last = vals.length - 1
+        const i = Math.floor(Math.random() * vals.length)
+        if (i != last) { //swap to end
+            [vals[i], vals[last]] = [vals[last], vals[i]]
         }
         const p = vals.pop()!
         p.invoke()
