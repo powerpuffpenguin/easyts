@@ -127,7 +127,7 @@ async function fibonacci(c: WriteChannel<number>, quit: ReadChannel<void>) {
                 break
             case qc:
                 // case 的 read 函數會返回讀取到的值，它是一個 IteratorResult<T>
-                console.log('quit', `doen=${qc.read().done}`)
+                console.log('quit', `done=${qc.read().done}`)
                 return
         }
     }

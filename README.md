@@ -126,7 +126,7 @@ async function fibonacci(c: WriteChannel<number>, quit: ReadChannel<void>) {
                 break
             case qc:
                 // The read function of the case will return the read value, which is an IteratorResult<T>
-                console.log('quit', `doen=${qc.read().done}`)
+                console.log('quit', `done=${qc.read().done}`)
                 return
         }
     }
