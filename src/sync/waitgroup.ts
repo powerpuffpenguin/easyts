@@ -1,8 +1,8 @@
 import { resolvePromise } from "../core/values";
 import { Completer } from '../core/async';
-import { Exception } from "../core";
+import { Exception } from "../core/exception";
 
-class WaitGroupException extends Exception {
+export class WaitGroupException extends Exception {
     constructor(msg: string) {
         super(msg)
     }
@@ -74,6 +74,8 @@ export class WaitGroup {
     }
     /**
      * Done decrements the WaitGroup counter by one.
+     * 
+     * @throws {@link WaitException}
      */
     done() {
         this.add(-1)
