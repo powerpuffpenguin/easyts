@@ -7,6 +7,10 @@ export declare type VoidCallback = () => void;
  */
 export declare type ValueCallback<T> = (val: T) => void;
 /**
+* Usually called before destroying the object, this function should not throw any exception, otherwise the behavior will be unknown
+*/
+export declare type DeleteCallback<T> = (val: T) => void;
+/**
  * Is the return value valid?
  */
 export declare type ValidCallback<T> = (val: T) => boolean;

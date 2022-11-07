@@ -1,4 +1,4 @@
-import { Chan, selectChan, WriteChannel } from "./channel"
+import { Chan, selectChan } from "./channel"
 
 QUnit.module('chan', hooks => {
     QUnit.test('no buffer', async (assert) => {

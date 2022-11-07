@@ -1,15 +1,10 @@
 import { Exception } from "../core/exception";
-import { ValueCallback, MapCallback, CloneCallback, CompareCallback, Swappable, Comparable, compare, ValidCallback } from "../core/types";
+import { ValueCallback, DeleteCallback, MapCallback, CloneCallback, CompareCallback, Comparable, compare, ValidCallback } from "../core/types";
 /**
  * Exceptions thrown by container operations
  */
 export class ContainerException extends Exception { }
-/**
- * The container has reached the capacity limit and cannot add new data
- */
-export const errBadAdd = new ContainerException('The container has reached the capacity limit and cannot add new data')
-export const errEmpty = new ContainerException('The container is empty')
-export const errIteratorInvalid = new ContainerException('The iterator is invalid')
+
 
 /**
  * container interface
@@ -17,7 +12,7 @@ export const errIteratorInvalid = new ContainerException('The iterator is invali
  * @remarks
  * Describes the methods and properties that all containers have
  */
-export interface Container<T> extends Swappable<T>, Comparable<T> {
+export interface Container<T> extends Comparable<T>, Iterable<T> {
     /**
      * Returns the current amount of data in the container
      */
@@ -43,11 +38,6 @@ export interface Container<T> extends Swappable<T>, Comparable<T> {
      */
     readonly isNotFull: boolean
     /**
-     * Swap data in two containers
-     * 
-     */
-    swap(o: Container<T>): void
-    /**
      * Create a full copy of the container
      * @param callback How to create a duplicate copy of an element 
      */
@@ -57,7 +47,7 @@ export interface Container<T> extends Swappable<T>, Comparable<T> {
      * 
      * @param callback Call callback on the removed element
      */
-    clear(callback?: ValueCallback<T>): void
+    clear(callback?: DeleteCallback<T>): void
     /**
      * Returns true if the data depth of the two containers is consistent
      * @param o 
@@ -67,13 +57,9 @@ export interface Container<T> extends Swappable<T>, Comparable<T> {
     /**
      * Returns a js iterator
      * 
-     * @param reverse The iterator returned if true will traverse the container in reverse order
+     * @param reverse If true, returns an iterator to traverse in reverse
      */
     iterator(reverse?: boolean): Iterator<T>;
-    /**
-     * Returns an object that implements a js Iterable
-     */
-    get iterable(): Iterable<T>;
     /**
      * Returns an object that implements a js Iterable, but it traverses the data in reverse
      */
@@ -100,64 +86,16 @@ export interface Container<T> extends Swappable<T>, Comparable<T> {
     map<TO>(callback: MapCallback<T, TO>, reverse?: boolean): Array<TO>
     /**
      * Returns whether the data data exists in the container
+     * @param reverse If true, traverse the container in reverse order
      */
     has(data: T, reverse?: boolean, callback?: CompareCallback<T>): boolean
 
-
     /**
-     * add element to the end of the container
-     * @param vals 
-     * 
-     * @throws {@link errBadAdd}
+     * Adds all the elements of an container into a string, separated by the specified separator string.
+     * @param separator 
+     * @param separator A string used to separate one element of the container from the next in the resulting string. If omitted, the array elements are separated with a comma.
      */
-    pushBack(...vals: Array<T>): void
-    /**
-    * add the element to the container head
-    * @param vals 
-    * 
-    * @throws {@link errBadAdd}
-    */
-    pushFront(...vals: Array<T>): void
-    /**
-     * add element to the end of the container
-     * @param vals 
-     * 
-     * @throws {@link errBadAdd}
-     */
-    pushBackIterable(it: Iterable<T>): void
-    /**
-    * add the element to the container head
-    * @param vals 
-    * 
-    * @throws {@link errBadAdd}
-    */
-    pushFrontIterable(it: Iterable<T>): void
-    /**
-     * remove the first element from the container
-     * 
-     * @param callback Call callback on the removed element
-     * @throws {@link errEmpty} 
-     */
-    popBack(callback?: ValueCallback<T>): T
-    /**
-    * remove the last element from the container
-    * 
-    * @param callback Call callback on the removed element
-    * @throws {@link errEmpty} 
-    */
-    popFront(callback?: ValueCallback<T>): T
-    /**
-    * Returns the last element in the container
-    * 
-    * @throws {@link errEmpty} 
-    */
-    get back(): T
-    /**
-    * Returns the first element in the container
-    * 
-    * @throws {@link errEmpty} 
-    */
-    get front(): T
+    join(separator?: string | undefined): string
 }
 /**
  * Container Creation Options
@@ -172,15 +110,15 @@ export interface Options<T> {
      */
     readonly compare?: CompareCallback<T>
     /**
-     * If this callback function is set, this callback function will be called before the element is removed from the container
+     * If this callback function is set, this callback function will be called after the element is removed from the container
      */
-    readonly erase?: ValueCallback<T>
+    readonly remove?: DeleteCallback<T>
 }
 /**
  * The base class of the container implements some common methods for the container
  */
-export class Basic<T>{
-    protected opts_: any
+export class Basic<T> implements Iterable<T>{
+    protected opts_: Options<T> | undefined
     protected constructor(opts?: Options<T>) {
         this.opts_ = opts
     }
@@ -235,7 +173,7 @@ export class Basic<T>{
 
     /**
      * Returns a js iterator
-     * @param reverse The iterator returned if true will traverse the container in reverse order
+     * @param reverse If true, returns an iterator to traverse in reverse
      * 
      * @virtual
      * 
@@ -275,16 +213,11 @@ export class Basic<T>{
         return 0
     }
     /**
-     * Returns an object that implements a js Iterable
+     * implements js Iterable
      * @sealedl
      */
-    get iterable(): Iterable<T> {
-        const i = this.iterator()
-        return {
-            [Symbol.iterator]() {
-                return i
-            }
-        }
+    [Symbol.iterator](): Iterator<T> {
+        return this.iterator()
     }
     /**
      * Returns an object that implements a js Iterable, but it traverses the data in reverse
@@ -293,57 +226,9 @@ export class Basic<T>{
     get reverse(): Iterable<T> {
         const i = this.iterator(true)
         return {
-            [Symbol.iterator]() {
+            *[Symbol.iterator]() {
                 return i
             }
-        }
-    }
-    /**
-     * add element to the end of the container
-     * @throws {@link errBadAdd}
-     */
-    pushBack(...vals: Array<T>): void {
-        throw new ContainerException('function pushBack not implemented')
-    }
-    /**
-    * add the element to the container head
-    * @throws {@link errBadAdd}
-    */
-    pushFront(...vals: Array<T>): void {
-        throw new ContainerException('function pushFront not implemented')
-    }
-    /**
-     * add element to the end of the container
-     * @param vals 
-     * 
-     * @throws {@link errBadAdd}
-     * 
-     * @virtual
-     */
-    pushBackIterable(it: Iterable<T>): void {
-        const vals = new Array<T>()
-        for (const v of it) {
-            vals.push(v)
-        }
-        if (vals.length != 0) {
-            this.pushBack(...vals)
-        }
-    }
-    /**
-    * add the element to the container head
-    * @param vals 
-    * 
-    * @throws {@link errBadAdd}
-    * 
-    * @virtual
-    */
-    pushFrontIterable(it: Iterable<T>): void {
-        const vals = new Array<T>()
-        for (const v of it) {
-            vals.push(v)
-        }
-        if (vals.length != 0) {
-            this.pushFront(...vals)
         }
     }
     /**
@@ -354,7 +239,7 @@ export class Basic<T>{
      * @virtual
      */
     forEach(callback: ValueCallback<T>, reverse?: boolean): void {
-        const it = reverse ? this.reverse : this.iterable
+        const it = reverse ? this.reverse : this
         for (const v of it) {
             callback(v)
         }
@@ -369,7 +254,7 @@ export class Basic<T>{
      * @virtual
      */
     find(callback: ValidCallback<T>, reverse?: boolean): boolean {
-        const it = reverse ? this.reverse : this.iterable
+        const it = reverse ? this.reverse : this
         for (const v of it) {
             if (callback(v)) {
                 return true
@@ -389,7 +274,7 @@ export class Basic<T>{
         if (length == 0) {
             return new Array<TO>()
         }
-        const it = reverse ? this.reverse : this.iterable
+        const it = reverse ? this.reverse : this
         const result = new Array<TO>(length)
         let i = 0
         for (const v of it) {
@@ -404,8 +289,7 @@ export class Basic<T>{
      */
     has(data: T, reverse?: boolean, callback?: CompareCallback<T>): boolean {
         callback = callback ?? this.opts_?.compare
-
-        const it = reverse ? this.reverse : this.iterable
+        const it = reverse ? this.reverse : this
         for (const v of it) {
             if (compare(data, v, callback) == 0) {
                 return true
@@ -413,6 +297,13 @@ export class Basic<T>{
         }
         return false
     }
-
+    /**
+     * Adds all the elements of an container into a string, separated by the specified separator string.
+     * @param separator 
+     * @param separator A string used to separate one element of the container from the next in the resulting string. If omitted, the array elements are separated with a comma.
+     */
+    join(separator?: string | undefined): string {
+        return this.map((v) => `${v}`).join(separator)
+    }
 }
 

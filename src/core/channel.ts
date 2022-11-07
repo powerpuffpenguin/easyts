@@ -509,7 +509,7 @@ class Writer {
         } else if (vals.length > 1) {
             shuffle(vals)
         }
-        const p: WirteValue = vals.pop() as any
+        const p = vals.pop()!
         p.invoke()
         return p.value
     }
