@@ -1,3 +1,4 @@
+import { Completer } from "./async"
 import { Exception } from "./exception"
 import { neverPromise, noResult } from "./values"
 
@@ -54,6 +55,11 @@ export interface ReadChannel<T> {
      * Implement asynchronous iterators
      */
     [Symbol.asyncIterator](): AsyncGenerator<T>
+
+    /**
+     * Wait for chan to close, no data will be read from chan
+     */
+    wait(): undefined | Promise<void>
 }
 /**
  * a write-only channel
@@ -257,6 +263,12 @@ export class Chan<T> implements ReadChannel<T>, WriteChannel<T> {
         return this.rw_.close()
     }
     /**
+     * Wait for chan to close, no data will be read from chan
+     */
+    wait(): undefined | Promise<void> {
+        return this.rw.wait()
+    }
+    /**
      * Create a case for select to read
      */
     readCase(): Case<T> {
@@ -409,8 +421,26 @@ class RW<T>{
         this.isClosed = true
         this.w_.close()
         this.r_.close()
+        const closed = this.closed_
+        if (closed) {
+            this.closed_ = undefined
+            closed.resolve()
+        }
         return true
     }
+    wait(): undefined | Promise<void> {
+        if (this.isClosed) {
+            return
+        }
+        let closed = this.closed_
+        if (closed) {
+            return closed.promise
+        }
+        closed = new Completer<void>()
+        this.closed_ = closed
+        return closed.promise
+    }
+    private closed_: Completer<void> | undefined
     isClosed = false
     get length(): number {
         return this.list?.length ?? 0
