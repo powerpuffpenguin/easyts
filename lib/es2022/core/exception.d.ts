@@ -14,4 +14,19 @@ export declare class Exception {
      * @virtual
      */
     error(): string;
+    /**
+     * If the current exception can be converted to the target exception, return the target exception, otherwise return undefined
+     * @virtual
+     */
+    as<T extends Exception>(target: ExceptionConstructor<T>): T | undefined;
+    /**
+     * Returns the wrapped exception if the current exception wraps another exception, otherwise returns undefined
+     * @virtual
+     */
+    unwrap(): undefined | Exception;
+    /**
+     * wrap the exception e into a new exception
+     */
+    static wrap(e: Exception, msg: string): Exception;
 }
+export declare type ExceptionConstructor<T extends Exception> = new (...args: any[]) => T;
