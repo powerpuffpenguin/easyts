@@ -20,6 +20,9 @@ export class WaitGroup {
      * Record how many async awaits are in progress
      */
     private counter_ = 0
+    get counter(): number {
+        return this.counter_
+    }
     /**
      * Signals are used to notify waiting for a function to return
      */
