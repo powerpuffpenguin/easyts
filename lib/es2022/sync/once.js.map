@@ -1,0 +1,1 @@
+{"version":3,"file":"once.js","sourceRoot":"","sources":["../../../src/sync/once.ts"],"names":[],"mappings":";;;AAEA;;;;GAIG;AACH,MAAa,IAAI;IACL,EAAE,GAAG,KAAK,CAAA;IAClB;;;;;OAKG;IACH,EAAE,CAAC,CAAe;QACd,IAAI,IAAI,CAAC,EAAE,EAAE;YACT,OAAM;SACT;QACD,IAAI,CAAC,EAAE,GAAG,IAAI,CAAA;QACd,CAAC,EAAE,CAAA;IACP,CAAC;CACJ;AAfD,oBAeC"}

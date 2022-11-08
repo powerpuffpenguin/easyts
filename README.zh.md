@@ -32,7 +32,7 @@ npm install @king011/easyts
 
 # 快速開始
 
-chan 和 select 有多好用相信不用解釋，不然我們也不會一起尋找在js中使用它的方法。如果對其概念和注意點有不清除的地方，請去查詢 golang 的相關介紹，本庫的使用方法邏輯都和 golang 類似。
+chan 和 select 有多好用相信不用解釋，不然我們也不會一起尋找在js中使用它的方法。如果對其概念和注意點有不清楚的地方，請去查詢 golang 的相關介紹，本庫的使用方法邏輯都和 golang 類似。
 
 直接來看代碼如何創建 chan 和傳遞 數據: [(golang)](https://go.dev/tour/concurrency/2)
 
@@ -217,9 +217,9 @@ main()
 
 在 0.0.6 之前的版本首要問題是解決功能完整性問題， chan 存在一個效能bug，當讀寫併發太高性能會嚴重下降，這是因爲我將併發的讀寫隨機排序後以然一個隨機的讀寫完成，排序佔用了大量cpu時間。在 0.0.6 版本我已經修復了這一問題，現在將爲併發產生一個隨機的數組索引來選取完成對象，當它完成後將其和讀寫數組最後一個元素交換位置後刪除。
 
-下面是一個生成消費模型下的效能測試(消費者固定爲 200 個)
+下面是一個生成消費模型下的效能測試(消費者固定爲 200 個) [code](https://github.com/powerpuffpenguin/easyts/blob/main/src/core/channel_bench_test.ts)
 
-|   easyts  |   golang 1.18 GOMAXPROCS(12)  |   golang 1.18 GOMAXPROCS(1)  |   producer count    | producer write|   total write  |
+|   easyts on node-v14.15.3  |   golang 1.18 GOMAXPROCS(12)  |   golang 1.18 GOMAXPROCS(1)  |   producer count    | producer write|   total write  |
 |---|---|---|---|---|---|
 |	21ms	|   3.418932ms    |	3.090608ms	|	100	|	100	|	10000	|
 |	105ms	|    31.774022ms   |	13.509742ms	|	100	|	1000	|	100000	|
