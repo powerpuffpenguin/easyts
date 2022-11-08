@@ -48,6 +48,10 @@ export interface ReadChannel<T> {
      * Implement asynchronous iterators
      */
     [Symbol.asyncIterator](): AsyncGenerator<T>;
+    /**
+     * Wait for chan to close, no data will be read from chan
+     */
+    wait(): undefined | Promise<void>;
 }
 /**
  * a write-only channel
@@ -181,6 +185,10 @@ export declare class Chan<T> implements ReadChannel<T>, WriteChannel<T> {
      * @returns Returns false if the channel has been closed, otherwise closes the channel and returns true
      */
     close(): boolean;
+    /**
+     * Wait for chan to close, no data will be read from chan
+     */
+    wait(): undefined | Promise<void>;
     /**
      * Create a case for select to read
      */
