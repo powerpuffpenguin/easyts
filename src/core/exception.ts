@@ -15,4 +15,44 @@ export class Exception {
     error(): string {
         return this.message
     }
+    /**
+     * If the current exception can be converted to the target exception, return the target exception, otherwise return undefined
+     * @virtual
+     */
+    as<T extends Exception>(target: ExceptionConstructor<T>): T | undefined {
+        if (this instanceof target) {
+            return this
+        }
+        let err = this.unwrap()
+        while (err) {
+            if (err instanceof target) {
+                return err
+            }
+            err = err.unwrap()
+        }
+        return
+    }
+    /**
+     * Returns the wrapped exception if the current exception wraps another exception, otherwise returns undefined
+     * @virtual
+     */
+    unwrap(): undefined | Exception {
+        return
+    }
+    /**
+     * wrap the exception e into a new exception
+     */
+    static wrap(e: Exception, msg: string): Exception {
+        return new Wrap(e, msg)
+    }
 }
+export type ExceptionConstructor<T extends Exception> = new (...args: any[]) => T
+class Wrap extends Exception {
+    constructor(private readonly e: Exception, msg: string) {
+        super(msg)
+    }
+    unwrap(): undefined | Exception {
+        return this.e
+    }
+}
+

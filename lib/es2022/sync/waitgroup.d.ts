@@ -1,3 +1,4 @@
+import { VoidCallback } from '../core/types';
 import { Exception } from "../core/exception";
 export declare class WaitGroupException extends Exception {
     constructor(msg: string);
@@ -26,16 +27,24 @@ export declare class WaitGroup {
     /**
      * Add adds delta, which may be negative, to the WaitGroup counter.
      * If the counter becomes zero, all goroutines blocked on Wait are released.
-     * If the counter goes negative, Add throws WaitException.
+     * If the counter goes negative, Add throws WaitGroupException.
      * @param delta WaitGroup.counter += delta
      *
-     * @throws {@link WaitException}
+     * @throws {@link WaitGroupException}
      */
     add(delta: number): void;
     /**
      * Done decrements the WaitGroup counter by one.
      *
-     * @throws {@link WaitException}
+     * @throws {@link WaitGroupException}
      */
     done(): void;
+    /**
+     * Execute function f after counter++, and execute counter-- after function f is done
+     * @param f function to execute
+     * @param oncompleted function to execute when f is done
+     * @returns If a promise is returned, the function f is completed after the promise is executed, otherwise the function f is already completed
+     */
+    do(f: () => any, oncompleted?: VoidCallback): void;
+    private _do;
 }

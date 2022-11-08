@@ -482,7 +482,8 @@ class Reader {
             case 1:
                 vals.pop()!.invoke(val)
                 return
-        }const last = vals.length - 1
+        }
+        const last = vals.length - 1
         const i = Math.floor(Math.random() * vals.length)
         if (i != last) { //swap to end
             [vals[i], vals[last]] = [vals[last], vals[i]]

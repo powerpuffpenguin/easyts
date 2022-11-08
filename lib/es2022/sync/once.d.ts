@@ -12,5 +12,5 @@ export declare class Once {
      * @remarks
      * In other words, given var once = new Once(), if once.do(f) is called multiple times, only the first call will invoke f, even if f has a different value in each invocation.
      */
-    do(f: VoidCallback): void;
+    do(f: VoidCallback): boolean;
 }
