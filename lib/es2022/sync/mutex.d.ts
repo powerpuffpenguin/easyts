@@ -2,9 +2,12 @@ import { Exception } from "../core/exception";
 export declare class MutexException extends Exception {
     constructor(msg: string);
 }
+/**
+ * A Locker represents an object that can be locked and unlocked.
+ */
 export interface Locker {
     tryLock(): boolean;
-    lock(): Promise<void> | undefined;
+    lock(): Promise<Locker> | undefined;
     unlock(): void;
 }
 export declare const errMutexUnlock: MutexException;
@@ -25,7 +28,7 @@ export declare class Mutex implements Locker {
      * if the lock no used, lock and return undefined.
      * If the lock is already in use, return a Promise wait for mutex is available.
      */
-    lock(): Promise<void> | undefined;
+    lock(): Promise<Locker> | undefined;
     private _lock;
     /**
      * unlocks

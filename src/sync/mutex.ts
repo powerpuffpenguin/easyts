@@ -5,10 +5,12 @@ export class MutexException extends Exception {
         super(msg)
     }
 }
-// A Locker represents an object that can be locked and unlocked.
+/**
+ * A Locker represents an object that can be locked and unlocked.
+ */
 export interface Locker {
     tryLock(): boolean
-    lock(): Promise<void> | undefined
+    lock(): Promise<Locker> | undefined
     unlock(): void
 }
 
@@ -36,19 +38,20 @@ export class Mutex implements Locker {
      * if the lock no used, lock and return undefined.
      * If the lock is already in use, return a Promise wait for mutex is available.
      */
-    lock(): Promise<void> | undefined {
+    lock(): Promise<Locker> | undefined {
         if (this.tryLock()) {
             return
         }
         return this._lock()
     }
-    private async _lock(): Promise<void> {
+    private async _lock(): Promise<Locker> {
         let c = this.c_
         while (c) {
             await c.promise
             c = this.c_
         }
         this.c_ = new Completer<void>()
+        return this
     }
     /**
      * unlocks

@@ -1,36 +1,108 @@
-import { Mutex } from "./mutex";
-import { WaitGroup } from "./waitgroup";
+import { Completer } from '../core/async';
+import { errMutexUnlock, Locker, MutexException } from './mutex';
 
+export const errRWMutexRUnlock = new MutexException('runlock of unrlocked rwmutex')
+
+export interface RWLocker extends Locker {
+    tryReadLock(): boolean
+    readLock(): Promise<RWLocker> | undefined
+    readUnlock(): void
+}
 /**
  * a reader/writer mutual exclusion lock.
  * 
  * @remarks
  * The lock can be held by an arbitrary number of readers or a single writer.
  */
-export class RWMutex {
-    private w_ = new Mutex()
-    private r_ = new WaitGroup()
-    constructor() {
-
-    }
+export class RWMutex implements RWLocker {
+    private c_: Completer<void> | undefined
+    private w_ = false
+    private r_ = 0
+    constructor() { }
     tryLock(): boolean {
-        const r = this.r_
-        if (r.counter != 0) {
+        if (this.c_) {
             return false
         }
-        const w = this.w_
-        if (w.tryLock()) {
-            return true
-        }
-        return false
+        this.w_ = true
+        this.c_ = new Completer<void>()
+        return true
     }
-    lock(): undefined | Promise<void> {
+    lock(): undefined | Promise<Locker> {
         if (this.tryLock()) {
             return
         }
         return this._lock()
     }
-    async _lock() {
+    async _lock(): Promise<Locker> {
+        let c: Completer<void> | undefined
+        while (true) {
+            c = this.c_
+            if (c) {
+                await c.promise
+                continue
+            }
+            this.w_ = true
+            this.c_ = new Completer<void>()
+            break
+        }
+        return this
+    }
+    unlock() {
+        if (!this.w_) {
+            throw errMutexUnlock
+        }
+        this.w_ = false
+        const c = this.c_
+        this.c_ = undefined
+        c!.resolve()
+    }
 
+    tryReadLock(): boolean {
+        if (this.r_ != 0) {
+            this.r_++
+            return true
+        } else if (this.w_) {
+            return false
+        }
+        this.r_ = 1
+        this.c_ = new Completer<void>()
+        return true
+    }
+    readLock(): undefined | Promise<RWLocker> {
+        if (this.tryReadLock()) {
+            return
+        }
+        return this._readLock()
+    }
+    async _readLock(): Promise<RWLocker> {
+        while (true) {
+            if (this.w_) {
+                await this.c_!.promise
+                continue
+            }
+            if (this.c_) {
+                this.r_++
+            } else {
+                this.r_ = 1
+                this.c_ = new Completer<void>()
+            }
+            break
+        }
+        return this
+    }
+    readUnlock() {
+        switch (this.r_) {
+            case 0:
+                throw errRWMutexRUnlock
+            case 1:
+                this.r_ = 0
+                const c = this.c_
+                this.c_ = undefined
+                c!.resolve()
+                break
+            default:
+                this.r_--
+                break
+        }
     }
 }
