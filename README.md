@@ -15,6 +15,11 @@ The original and core content of this library is to implement golang's chan and 
     * [default](#default)
     * [bench](#bench)
 * [api](https://powerpuffpenguin.github.io/ts/easyts/)
+* [module](#module)
+    * [core](#core)
+    * [container](#container)
+    * [sync](#sync)
+    * [time](#time)
 
 # Install
 
@@ -225,3 +230,37 @@ The following is a performance test under a generative consumption model (consum
 |	966ms	|	339.338306ms    |   134.449078ms	|	1000	|	1000	|	1000000	|
 |	4.725s	|	1.67669658s    |   659.809691ms	|	1000	|	5000	|	5000000	|
 |	9.573s	|	3.376229048s    |   1.305668965s	|	1000	|	10000	|	10000000	|
+
+# module
+
+This library contains many modular components, you can import your own requirements, the following is the index and function introduction of these modules, you can find the modules you want to use here
+
+## core
+
+[core](https://powerpuffpenguin.github.io/ts/easyts/modules/core.html) is the most important module, it mainly implements some functions that I expect js to be able to provide but actually don't have. So I implemented them myself, using the components here can more or less change the mode of writing code
+
+core mainly contains the following contents
+
+* A complete simulation of chan and select in golang language
+* Mock support for defer in golang language
+* A class Exception is defined to provide golang-like error recognition
+* Implement a Completer for Promise with reference to dartlang's Completer
+* Refer to c++ boost to implement a signals/slots
+
+## container
+
+[container](https://powerpuffpenguin.github.io/ts/easyts/modules/container.html) is mainly some data containers. I wanted to implement it with reference to c++ std, but I found that the workload is too much and it is too difficult, and the style is too inconsistent with js. After thinking about it, I asked myself is the container/algorithm of c++ std really necessary? The answer is no. Usually, the optimization algorithm that needs to consider performance needs to be optimized for a specific container, so I rarely use the general algorithm provided by std even in C++, but to call the algorithm version specialized for the container itself. So in the end I only defined a few properties and methods for the container interface that felt the most used.
+
+container currently contains the following:
+
+* List A doubly linked list implemented with reference to the golang standard library
+
+## sync
+
+[sync](https://powerpuffpenguin.github.io/ts/easyts/modules/sync.html) implements some locks, and WaitGroup is used to wait for async to complete. Their interface signatures all refer to golang, but the implementation is not because js is single-threaded, so it is much easier to implement these than in golang. Although single-threaded race conditions do not occur, locks are also necessary if an operation involves multiple asynchronous processes at the same time. 
+
+In addition, condition variable is currently not implemented, because js uses very few locks, and the implementation of condition variable is a little complicated. In fact, condition variable and chan are similar in nature, so you should use chan instead of traditional condition variable.
+
+## time
+
+[time](https://powerpuffpenguin.github.io/ts/easyts/modules/time.html) implements some timers with reference to golang's standard library. Although js itself provides timers, they cannot be used well with chan and select.

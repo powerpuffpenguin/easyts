@@ -15,6 +15,11 @@ js library written with ts
     * [default](#default)
     * [bench](#bench)
 * [api](https://powerpuffpenguin.github.io/ts/easyts/)
+* [module](#module)
+    * [core](#core)
+    * [container](#container)
+    * [sync](#sync)
+    * [time](#time)
 
 # 安裝
 
@@ -227,3 +232,36 @@ main()
 |	4.725s	|	1.67669658s    |   659.809691ms	|	1000	|	5000	|	5000000	|
 |	9.573s	|	3.376229048s    |   1.305668965s	|	1000	|	10000	|	10000000	|
 
+# module
+
+本庫包含了很多模塊化的組件，你可以安自己需求 import，下面是這些模塊的索引和功能簡介你可以在此查找想要使用的模塊
+
+## core
+
+[core](https://powerpuffpenguin.github.io/ts/easyts/modules/core.html) 是最重要的一個模塊，它主要實現了一些我期望 js 能夠內置但實際上並沒有的功能。於是我自己實現了它們，使用這裏面的組件可以或多或少改變寫代碼的模式
+
+core 主要包含下述內容
+
+* 對 golang 語言的 chan 和 select 的完整模擬
+* 對 golang 語言的 defer 提供了模擬支持
+* 定義了一個 class Exception 來提供類似 golang 的錯誤識別
+* 參照 dart 的 Completer 爲 Promise 實現了一個 Completer
+* 參考 c++ boost 實現了一個 signals/slots 
+
+## container
+
+[container](https://powerpuffpenguin.github.io/ts/easyts/modules/container.html) 模塊主要是一些數據容器，本來想參照 c++ std 來實現，但我發現這樣工作量太多難度太高，而且風格也和 js 太不搭調。仔細思考後我問自己 c++ std 的 container/algorithm 真的有必要嗎？答案是否定的，通常要考慮效能的化算法需要爲特定容器去優化，所以 std 提供的通用算法即時在 c++ 裏面我也很少使用而是去調用容器本身特化的算法版本。故最終我只爲容器接口定義了少數幾個感覺最長被用到的屬性和方法。
+
+container 目前包含下述內容：
+
+* List 一個參照 golang 標準庫實現的雙向鏈表
+
+## sync
+
+[sync](https://powerpuffpenguin.github.io/ts/easyts/modules/sync.html) 實現了一些鎖，和 WaitGroup 用於等待異步完成，它們的接口簽名都參考了 golang 但實現則沒有因爲 js 是單線程的所以實現這些比 golang 中容易很多。雖然單線程不會出現競態但如果一個操作同時包含多個異步處理則鎖也是必要的。
+
+此外目前沒有實現 condition variable，因爲 js 用到鎖的情況的確很少，實現 condition variable 也稍顯複雜，並且其實 condition variable 和 chan 本質上是類似的，故你應該使用 chan 而非傳統的 condition variable。
+
+## time
+
+[time](https://powerpuffpenguin.github.io/ts/easyts/modules/time.html) 參照 golang 的標準庫實現了一些定時器，雖然 js 本身提供了定時器但它們不能很好的和 chan 與 select 配合使用。
