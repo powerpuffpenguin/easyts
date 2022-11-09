@@ -1,7 +1,4 @@
 import { Exception } from "../core/exception";
-export declare class MutexException extends Exception {
-    constructor(msg: string);
-}
 /**
  * A Locker represents an object that can be locked and unlocked.
  */
@@ -10,7 +7,7 @@ export interface Locker {
     lock(): Promise<Locker> | undefined;
     unlock(): void;
 }
-export declare const errMutexUnlock: MutexException;
+export declare const errMutexUnlock: Exception;
 /**
  * a mutual exclusion lock.
  */

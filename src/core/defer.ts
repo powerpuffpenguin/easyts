@@ -19,6 +19,7 @@ export class DeferException extends Exception {
     /**
      * If the current exception can be converted to the target exception, return the target exception, otherwise return undefined
      * @virtual
+     * @override
      */
     as<T extends Exception>(target: ExceptionConstructor<T>): T | undefined {
         if (this instanceof target) {
@@ -33,6 +34,24 @@ export class DeferException extends Exception {
             }
         }
         return
+    }
+    /**
+     * 
+     * @virtual
+     * @override
+     */
+    is(target: any): boolean {
+        if (this === target) {
+            return true
+        }
+        for (const e of this.errs) {
+            if (e instanceof Exception) {
+                if (e.is(target)) {
+                    return true
+                }
+            }
+        }
+        return false
     }
     /**
      * 

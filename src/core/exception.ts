@@ -32,6 +32,19 @@ export class Exception {
         }
         return
     }
+    is(target: any): boolean {
+        if (this === target) {
+            return true
+        }
+        let err = this.unwrap()
+        while (err) {
+            if (err === target) {
+                return true
+            }
+            err = err.unwrap()
+        }
+        return false
+    }
     /**
      * Returns the wrapped exception if the current exception wraps another exception, otherwise returns undefined
      * @virtual

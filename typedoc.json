@@ -4,6 +4,7 @@
         "src/container.ts",
         "src/core.ts",
         "src/sync.ts",
+        "src/time.ts",
     ],
     "out": "powerpuffpenguin.github.io/ts/easyts"
 }

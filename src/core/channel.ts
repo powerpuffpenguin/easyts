@@ -2,24 +2,21 @@ import { Completer } from "./async"
 import { Exception } from "./exception"
 import { neverPromise, noResult } from "./values"
 
-/**
- * Exceptions thrown by Channel operations
- */
-export class ChannelException extends Exception { }
+
 /**
  * Thrown when writing to a closed channel
  */
-export const errChannelClosed = new ChannelException('write on closed channel')
-const errChannelWriterEmpty = new ChannelException('Writer empty')
-const errChannelReaderEmpty = new ChannelException('Reader empty')
+export const errChannelClosed = new Exception('write on closed channel')
+const errChannelWriterEmpty = new Exception('Writer empty')
+const errChannelReaderEmpty = new Exception('Reader empty')
 /**
  * Thrown when case is not writable or not ready
  */
-export const errChanneWriteCase = new ChannelException('case not ready or unwritable')
+export const errChanneWriteCase = new Exception('case not ready or unwritable')
 /**
  * Thrown when case is not readable or not ready
  */
-export const errChanneReadCase = new ChannelException('case not ready or unreadable')
+export const errChanneReadCase = new Exception('case not ready or unreadable')
 
 /**
  * a read-only channel
@@ -154,6 +151,13 @@ export interface Channel<T> extends ReadChannel<T>, WriteChannel<T> { }
  * ```
  */
 export class Chan<T> implements ReadChannel<T>, WriteChannel<T> {
+    private static never_: undefined | Chan<any>
+    /**
+     * Returns a chan that will never have a value, usually used as some token
+     */
+    static get never(): ReadChannel<any> {
+        return Chan.never_ || (Chan.never_ = new Chan<any>())
+    }
     /**
      * Low-level read and write implementation
      * @internal

@@ -1,10 +1,5 @@
 import { Exception } from "../core/exception";
 import { ValueCallback, DeleteCallback, MapCallback, CloneCallback, CompareCallback, Comparable, compare, ValidCallback } from "../core/types";
-/**
- * Exceptions thrown by container operations
- */
-export class ContainerException extends Exception { }
-
 
 /**
  * container interface
@@ -128,7 +123,7 @@ export class Basic<T> implements Iterable<T>{
      * @virtual
      */
     get length(): number {
-        throw new ContainerException('function length not implemented')
+        throw new Exception('function length not implemented')
     }
     /**
      * Returns the current capacity of the container
@@ -136,7 +131,7 @@ export class Basic<T> implements Iterable<T>{
      * @virtual
      */
     get capacity(): number {
-        throw new ContainerException('function capacity not implemented')
+        throw new Exception('function capacity not implemented')
     }
     /**
      * Returns true if there is no data in the container
@@ -179,7 +174,7 @@ export class Basic<T> implements Iterable<T>{
      * 
      */
     iterator(reverse?: boolean): Iterator<T> {
-        throw new ContainerException('function iterator not implemented')
+        throw new Exception('function iterator not implemented')
     }
 
     /**

@@ -1,7 +1,7 @@
 import { Completer } from '../core/async';
-import { errMutexUnlock, Locker, MutexException } from './mutex';
-
-export const errRWMutexRUnlock = new MutexException('runlock of unrlocked rwmutex')
+import { errMutexUnlock, Locker } from './mutex';
+import { Exception } from "../core/exception";
+export const errRWMutexRUnlock = new Exception('runlock of unrlocked rwmutex')
 
 export interface RWLocker extends Locker {
     tryReadLock(): boolean

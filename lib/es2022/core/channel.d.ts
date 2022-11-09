@@ -1,21 +1,16 @@
 import { Exception } from "./exception";
 /**
- * Exceptions thrown by Channel operations
- */
-export declare class ChannelException extends Exception {
-}
-/**
  * Thrown when writing to a closed channel
  */
-export declare const errChannelClosed: ChannelException;
+export declare const errChannelClosed: Exception;
 /**
  * Thrown when case is not writable or not ready
  */
-export declare const errChanneWriteCase: ChannelException;
+export declare const errChanneWriteCase: Exception;
 /**
  * Thrown when case is not readable or not ready
  */
-export declare const errChanneReadCase: ChannelException;
+export declare const errChanneReadCase: Exception;
 /**
  * a read-only channel
  */
@@ -147,6 +142,11 @@ export interface Channel<T> extends ReadChannel<T>, WriteChannel<T> {
  * ```
  */
 export declare class Chan<T> implements ReadChannel<T>, WriteChannel<T> {
+    private static never_;
+    /**
+     * Returns a chan that will never have a value, usually used as some token
+     */
+    static get never(): ReadChannel<any>;
     /**
      *
      * @params buffered size, if greater than 0 enable buffering for the channel

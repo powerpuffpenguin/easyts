@@ -1,10 +1,6 @@
 import { Completer } from "../core/async";
 import { Exception } from "../core/exception";
-export class MutexException extends Exception {
-    constructor(msg: string) {
-        super(msg)
-    }
-}
+
 /**
  * A Locker represents an object that can be locked and unlocked.
  */
@@ -14,7 +10,7 @@ export interface Locker {
     unlock(): void
 }
 
-export const errMutexUnlock = new MutexException('unlock of unlocked mutex')
+export const errMutexUnlock = new Exception('unlock of unlocked mutex')
 /**
  * a mutual exclusion lock.
  */

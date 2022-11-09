@@ -2,11 +2,7 @@ import { VoidCallback } from '../core/types';
 import { Completer } from '../core/async';
 import { Exception } from "../core/exception";
 
-export class WaitGroupException extends Exception {
-    constructor(msg: string) {
-        super(msg)
-    }
-}
+
 /**
  * A WaitGroup waits for a collection of async process to finish.
  * 
@@ -57,7 +53,7 @@ export class WaitGroup {
         }
         let v = Math.floor(delta)
         if (!isFinite(v) || v != delta) {
-            throw new WaitGroupException(`delta must be a integer: ${delta}`)
+            throw new Exception(`delta must be a integer: ${delta}`)
         }
         v += this.counter_
         if (v === 0) {
@@ -68,9 +64,9 @@ export class WaitGroup {
                 c.resolve()
             }
         } else if (v < 0) {
-            throw new WaitGroupException(`negative WaitGroup counter: ${v}`)
+            throw new Exception(`negative WaitGroup counter: ${v}`)
         } else if (!isFinite(v)) {
-            throw new WaitGroupException(`invalid WaitGroup counter: ${v}`)
+            throw new Exception(`invalid WaitGroup counter: ${v}`)
         } else {
             this.counter_ = v
         }
