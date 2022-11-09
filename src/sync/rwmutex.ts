@@ -1,4 +1,4 @@
-import { Completer } from '../core/async';
+import { Completer } from '../core/completer';
 import { errMutexUnlock, Locker } from './mutex';
 import { Exception } from "../core/exception";
 export const errRWMutexRUnlock = new Exception('runlock of unrlocked rwmutex')

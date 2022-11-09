@@ -13,8 +13,15 @@ export declare class DeferException extends Exception {
     /**
      * If the current exception can be converted to the target exception, return the target exception, otherwise return undefined
      * @virtual
+     * @override
      */
     as<T extends Exception>(target: ExceptionConstructor<T>): T | undefined;
+    /**
+     *
+     * @virtual
+     * @override
+     */
+    is(target: any): boolean;
     /**
      *
      * @returns Returns the string description of the exception

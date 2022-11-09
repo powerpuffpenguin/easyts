@@ -1,5 +1,5 @@
 import { VoidCallback } from '../core/types';
-import { Completer } from '../core/async';
+import { Completer } from '../core/completer';
 import { Exception } from "../core/exception";
 
 

@@ -30,7 +30,7 @@ export interface ReadChannel<T> {
     /**
      * Create a case for select to read
      */
-    readCase(): Case<T>;
+    readCase(): ReadCase<T>;
     /**
      * Returns the channel buffer size
      */
@@ -89,7 +89,7 @@ export interface WriteChannel<T> {
     * @throws ChannelException
     * Writing a value to a closed channel, select will throw errChannelClosed
     */
-    writeCase(val: T, exception?: boolean): Case<T>;
+    writeCase(val: T, exception?: boolean): WriteCase<T>;
     /**
      * Returns the channel buffer size
      */
@@ -192,7 +192,7 @@ export declare class Chan<T> implements ReadChannel<T>, WriteChannel<T> {
     /**
      * Create a case for select to read
      */
-    readCase(): Case<T>;
+    readCase(): ReadCase<T>;
     /**
     * Create a case for select to write to
     * @param val value to write
@@ -201,7 +201,7 @@ export declare class Chan<T> implements ReadChannel<T>, WriteChannel<T> {
     * @throws ChannelException
     * Writing a value to a closed channel, select will throw errChannelClosed
     */
-    writeCase(val: T, exception?: boolean): Case<T>;
+    writeCase(val: T, exception?: boolean): WriteCase<T>;
     /**
      * Returns whether the channel is closed
      */
@@ -219,14 +219,20 @@ export declare class Chan<T> implements ReadChannel<T>, WriteChannel<T> {
      */
     [Symbol.asyncIterator](): AsyncGenerator<T>;
 }
-export interface CaseLike {
-    toString(): string;
+export declare type CaseLike = ReadCaseLike | WriteCaseLike;
+export interface ReadCaseLike {
     /**
      * Returns the value read by the case, throws an exception if the case is not ready or this is not a read case
      */
     read(): IteratorResult<any>;
     /**
-     * Returns whether the case was written successfully, throws an exception if the case is not ready or this is not a write case
+     * Returns whether this case is ready
+     */
+    readonly isReady: boolean;
+}
+export interface WriteCaseLike {
+    /**
+     * Returns whether the case was written successfully, throws an exception if the case is not ready
      */
     write(): boolean;
     /**
@@ -238,20 +244,28 @@ export interface CaseLike {
  *
  * @sealed
  */
-export declare class Case<T> {
+export declare class ReadCase<T> implements ReadCaseLike {
     private readonly ch;
-    private readonly r;
-    private readonly val?;
-    private readonly exception?;
     private constructor();
-    toString(): string;
-    private _tryWrite;
-    private _tryRead;
     private read_?;
     /**
-     * Returns the value read by the case, throws an exception if the case is not ready or this is not a read case
+     * Returns the value read by the case, throws an exception if the case is not ready
      */
     read(): IteratorResult<T>;
+    /**
+     * Returns whether this case is ready
+     */
+    get isReady(): boolean;
+}
+/**
+ *
+ * @sealed
+ */
+export declare class WriteCase<T> implements WriteCaseLike {
+    private readonly ch;
+    private readonly val;
+    private readonly exception?;
+    private constructor();
     private write_?;
     /**
      * Returns whether the case was written successfully, throws an exception if the case is not ready or this is not a write case

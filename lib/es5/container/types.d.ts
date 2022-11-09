@@ -1,10 +1,4 @@
-import { Exception } from "../core/exception";
 import { ValueCallback, DeleteCallback, MapCallback, CloneCallback, CompareCallback, Comparable, ValidCallback } from "../core/types";
-/**
- * Exceptions thrown by container operations
- */
-export declare class ContainerException extends Exception {
-}
 /**
  * container interface
  *

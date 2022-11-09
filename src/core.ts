@@ -1,4 +1,4 @@
-export * from './core/async';
+export * from './core/completer';
 export * from './core/channel';
 export * from './core/defer';
 export * from './core/exception';

@@ -19,6 +19,7 @@ export declare class Exception {
      * @virtual
      */
     as<T extends Exception>(target: ExceptionConstructor<T>): T | undefined;
+    is(target: any): boolean;
     /**
      * Returns the wrapped exception if the current exception wraps another exception, otherwise returns undefined
      * @virtual

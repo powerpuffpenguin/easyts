@@ -1,4 +1,4 @@
-import { Completer } from "./async"
+import { Completer } from "./completer"
 import { Exception } from "./exception"
 import { neverPromise, noResult } from "./values"
 
@@ -38,7 +38,7 @@ export interface ReadChannel<T> {
     /**
      * Create a case for select to read
      */
-    readCase(): Case<T>
+    readCase(): ReadCase<T>
     /**
      * Returns the channel buffer size
      */
@@ -99,7 +99,7 @@ export interface WriteChannel<T> {
     * @throws ChannelException
     * Writing a value to a closed channel, select will throw errChannelClosed
     */
-    writeCase(val: T, exception?: boolean): Case<T>
+    writeCase(val: T, exception?: boolean): WriteCase<T>
     /**
      * Returns the channel buffer size
      */
@@ -275,8 +275,8 @@ export class Chan<T> implements ReadChannel<T>, WriteChannel<T> {
     /**
      * Create a case for select to read
      */
-    readCase(): Case<T> {
-        return Case.make(this, true)
+    readCase(): ReadCase<T> {
+        return ReadCase.make(this)
     }
     /**
     * Create a case for select to write to
@@ -286,8 +286,8 @@ export class Chan<T> implements ReadChannel<T>, WriteChannel<T> {
     * @throws ChannelException
     * Writing a value to a closed channel, select will throw errChannelClosed
     */
-    writeCase(val: T, exception?: boolean): Case<T> {
-        return Case.make(this, false, val, exception)
+    writeCase(val: T, exception?: boolean): WriteCase<T> {
+        return WriteCase.make(this, val, exception)
     }
     /**
      * Returns whether the channel is closed
@@ -614,8 +614,8 @@ class WirteValue {
         this.p.disconet(this)
     }
 }
-export interface CaseLike {
-    toString(): string
+export type CaseLike = ReadCaseLike | WriteCaseLike
+export interface ReadCaseLike {
     /**
      * reset read-write status
      * @internal
@@ -638,7 +638,30 @@ export interface CaseLike {
      */
     read(): IteratorResult<any>
     /**
-     * Returns whether the case was written successfully, throws an exception if the case is not ready or this is not a write case
+     * Returns whether this case is ready
+     */
+    readonly isReady: boolean
+}
+export interface WriteCaseLike {
+    /**
+     * reset read-write status
+     * @internal
+     */
+    reset(): void
+    /**
+    * @internal
+    */
+    tryInvoke(): boolean
+    /**
+    * @internal
+    */
+    do(resolve: (c: CaseLike) => void, reject: (c: CaseLike) => void): Connection
+    /**
+    * @internal
+    */
+    invoke(): Promise<void>
+    /**
+     * Returns whether the case was written successfully, throws an exception if the case is not ready
      */
     write(): boolean
     /**
@@ -650,132 +673,18 @@ export interface CaseLike {
  * 
  * @sealed
  */
-export class Case<T>{
+export class ReadCase<T> implements ReadCaseLike {
     /**
-    * @internal
-    */
-    static make<T>(ch: Chan<T>, r: boolean, val?: any, exception?: boolean): Case<T> {
-        return new Case<T>(ch, r, val, exception)
-    }
-    private constructor(private readonly ch: Chan<T>,
-        private readonly r: boolean,
-        private readonly val?: any,
-        private readonly exception?: boolean,
-    ) {
-    }
-    toString(): string {
-        if (this.r) {
-            return JSON.stringify({
-                case: 'read',
-                ready: this.isReady,
-                val: this.read_,
-            }, undefined, "\t")
-        } else {
-            return JSON.stringify({
-                case: 'write',
-                ready: this.isReady,
-                val: this.write_,
-            }, undefined, "\t")
-        }
-    }
-    /**
-     * reset read-write status
      * @internal
      */
-    reset() {
-        if (this.r) {
-            this.read_ = undefined
-        } else {
-            this.write_ = undefined
-        }
+    static make<T>(ch: Chan<T>): ReadCase<T> {
+        return new ReadCase<T>(ch)
     }
-    /**
-    * @internal
-    */
-    tryInvoke(): boolean {
-        if (this.r) {
-            return this._tryRead()
-        } else {
-            return this._tryWrite()
-        }
-    }
-    /**
-    * @internal
-    */
-    do(resolve: (c: CaseLike) => void, reject: (c: CaseLike) => void): Connection {
-        const rw = this.ch.rw
-        if (this.r) {
-            return rw.read((val) => {
-                this.read_ = val
-                resolve(this)
-            })
-        } else {
-            return rw.write((ok) => {
-                if (ok) {
-                    this.write_ = true
-                } else {
-                    this.write_ = false
-                    if (this.exception) {
-                        reject(this)
-                        return
-                    }
-                }
-                resolve(this)
-            }, undefined, this.val)
-        }
-    }
-    /**
-    * @internal
-    */
-    invoke(): Promise<void> {
-        const rw = this.ch.rw
-        if (this.r) {
-            return new Promise((resolve) => {
-                rw.read((val) => {
-                    this.read_ = val
-                    resolve()
-                })
-            })
-        } else {
-            return new Promise((resolve, reject) => {
-                rw.write((ok) => {
-                    if (ok) {
-                        this.write_ = true
-                    } else {
-                        this.write_ = false
-                        if (this.exception) {
-                            reject(errChannelClosed)
-                            return
-                        }
-                    }
-                    resolve()
-                }, undefined, this.val)
-            })
-        }
-    }
-    private _tryWrite(): boolean {
-        const ch = this.ch
-        const val = ch.tryWrite(this.val, this.exception)
-        if (val) {
-            this.write_ = true
-            return true
-        } else if (ch.isClosed) {
-            this.write_ = false
-            return true
-        }
-        return false
-    }
-    private _tryRead(): boolean {
-        const val = this.ch.tryRead()
-        if (val == undefined) {
-            return false
-        }
-        this.read_ = val
-        return true
+    private constructor(private readonly ch: Chan<T>) {
     }
     private read_?: IteratorResult<T>
     /**
-     * Returns the value read by the case, throws an exception if the case is not ready or this is not a read case
+     * Returns the value read by the case, throws an exception if the case is not ready
      */
     read(): IteratorResult<T> {
         const val = this.read_
@@ -783,6 +692,132 @@ export class Case<T>{
             throw errChanneReadCase
         }
         return val
+    }
+    /**
+     * reset read-write status
+     * @internal
+     */
+    reset(): void {
+        this.read_ = undefined
+    }
+    /**
+     * Returns whether this case is ready
+     */
+    get isReady(): boolean {
+        return this.read_ !== undefined
+    }
+    /**
+    * @internal
+    */
+    tryInvoke(): boolean {
+        const val = this.ch.tryRead()
+        if (val === undefined) {
+            return false
+        }
+        this.read_ = val
+        return true
+    }
+    /**
+    * @internal
+    */
+    do(resolve: (c: CaseLike) => void, reject: (c: CaseLike) => void): Connection {
+        const rw = this.ch.rw
+        return rw.read((val) => {
+            this.read_ = val
+            resolve(this)
+        })
+    }
+    /**
+    * @internal
+    */
+    invoke(): Promise<void> {
+        const rw = this.ch.rw
+        return new Promise((resolve) => {
+            rw.read((val) => {
+                this.read_ = val
+                resolve()
+            })
+        })
+    }
+}
+/**
+ * 
+ * @sealed
+ */
+export class WriteCase<T> implements WriteCaseLike {
+    /**
+    * @internal
+    */
+    static make<T>(ch: Chan<T>, val: T, exception?: boolean): WriteCase<T> {
+        return new WriteCase<T>(ch, val, exception)
+    }
+    private constructor(private readonly ch: Chan<T>,
+        private readonly val: T,
+        private readonly exception?: boolean,
+    ) {
+    }
+    /**
+     * reset read-write status
+     * @internal
+     */
+    reset() {
+        this.write_ = undefined
+    }
+    /**
+    * @internal
+    */
+    tryInvoke(): boolean {
+        const ch = this.ch
+        const val = ch.tryWrite(this.val, false)
+        if (val) {
+            this.write_ = true
+            return true
+        } else if (ch.isClosed) {
+            this.write_ = false
+            if (this.exception) {
+                throw errChannelClosed
+            }
+            return true
+        }
+        return false
+    }
+    /**
+    * @internal
+    */
+    do(resolve: (c: CaseLike) => void, reject: (c: CaseLike) => void): Connection {
+        const rw = this.ch.rw
+        return rw.write((ok) => {
+            if (ok) {
+                this.write_ = true
+            } else {
+                this.write_ = false
+                if (this.exception) {
+                    reject(this)
+                    return
+                }
+            }
+            resolve(this)
+        }, undefined, this.val)
+    }
+    /**
+    * @internal
+    */
+    invoke(): Promise<void> {
+        const rw = this.ch.rw
+        return new Promise((resolve, reject) => {
+            rw.write((ok) => {
+                if (ok) {
+                    this.write_ = true
+                } else {
+                    this.write_ = false
+                    if (this.exception) {
+                        reject(errChannelClosed)
+                        return
+                    }
+                }
+                resolve()
+            }, undefined, this.val)
+        })
     }
     private write_?: boolean
     /**
@@ -799,7 +834,7 @@ export class Case<T>{
      * Returns whether this case is ready
      */
     get isReady(): boolean {
-        return this.r ? this.read_ !== undefined : this.write_ !== undefined
+        return this.write_ !== undefined
     }
 }
 /**
@@ -873,17 +908,16 @@ export function selectChan(...cases: Array<CaseLike | undefined>): Promise<CaseL
         return
     } else if (cases.length == 1) {
         // 只有一個 case
-        const c = cases[0] as CaseLike
+        const c = cases[0]!
         return c.invoke().then(() => {
             return c
         })
     }
     // 存在多個 case
     return new Promise((resolve, reject) => {
-        const arrs = cases as Array<CaseLike>
-        const conns = new Array<Connection>(arrs.length)
-        for (let i = 0; i < arrs.length; i++) {
-            conns[i] = arrs[i].do((c) => {
+        const conns = new Array<Connection>(cases.length)
+        for (let i = 0; i < cases.length; i++) {
+            conns[i] = cases[i]!.do((c) => {
                 for (let i = 0; i < conns.length; i++) {
                     conns[i].disconet()
                 }

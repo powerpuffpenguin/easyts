@@ -1,8 +1,4 @@
 import { VoidCallback } from '../core/types';
-import { Exception } from "../core/exception";
-export declare class WaitGroupException extends Exception {
-    constructor(msg: string);
-}
 /**
  * A WaitGroup waits for a collection of async process to finish.
  *
