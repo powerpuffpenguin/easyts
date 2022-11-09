@@ -1,6 +1,7 @@
 import { noResult } from "../core/values";
 import { CompareCallback, DeleteCallback, compare, CloneCallback } from "../core/types";
 import { Basic, Options } from "./types";
+import { Exception, errOutOfRange } from "../core";
 function getIndex(i: number): number {
     if (i < 1) {
         return 0
@@ -53,18 +54,28 @@ function down<T>(h: Array<T>, i0: number, n: number, cf?: CompareCallback<T>): b
 }
 /**
  * Fix re-establishes the heap ordering after the element at index i has changed its value.
+ * @throws {@link errOutOfRange}
  */
 export function fix<T>(h: Array<T>, i: number, cf?: CompareCallback<T>) {
+    if (i < 0 || i >= h.length) {
+        throw Exception.wrap(errOutOfRange, `index out of range [${i}]`)
+    }
     if (!down(h, i, h.length, cf)) {
         up(h, i, cf)
     }
 }
 /**
  * Pop removes and returns the minimum element (according to cf or <) from the heap.
+ * 
+ * @throws {@link errOutOfRange}
  */
 export function pop<T>(h: Array<T>, cf?: CompareCallback<T>, rf?: DeleteCallback<T>): T {
     const n = h.length - 1;
-    [h[0], h[n]] = [h[n], h[0]]
+    if (n < 0) {
+        throw Exception.wrap(errOutOfRange, `pop out of range`)
+    } else if (n != 0) {
+        [h[0], h[n]] = [h[n], h[0]]
+    }
     down(h, 0, n, cf)
     const v = h[h.length - 1]
     h.pop()
@@ -83,8 +94,13 @@ export function push<T>(h: Array<T>, val: T, cf?: CompareCallback<T>) {
 }
 /**
  * Remove removes and returns the element at index i from the heap.
+ * 
+ * @throws {@link errOutOfRange}
  */
 export function remove<T>(h: Array<T>, i: number, cf?: CompareCallback<T>, rf?: DeleteCallback<T>): T {
+    if (i < 0 || i >= h.length) {
+        throw Exception.wrap(errOutOfRange, `index out of range [${i}]`)
+    }
     let n = h.length - 1
     if (n != i) {
         [h[i], h[n]] = [h[n], h[i]]
@@ -100,7 +116,28 @@ export function remove<T>(h: Array<T>, i: number, cf?: CompareCallback<T>, rf?: 
     return v
 }
 export class Heap<T> extends Basic<T> {
-    private h_ = new Array<T>()
+    /**
+     * Initialize array to heap
+     */
+    heapify() {
+        heapify(this.h_, this.opts_?.compare)
+    }
+    /**
+     * Fix re-establishes the heap ordering after the element at index i has changed its value.
+     */
+    fix(i: number) {
+        fix(this.h_, i, this.opts_?.compare)
+    }
+    /**
+     * array heap 
+     */
+    private readonly h_: Array<T>
+    /**
+     * Returns an array of underlying storage
+     */
+    get heap(): Array<T> {
+        return this.h_
+    }
     /**
      * returns the length of the heap
      * @override
@@ -115,11 +152,26 @@ export class Heap<T> extends Basic<T> {
     get capacity(): number {
         return Number.MAX_SAFE_INTEGER
     }
+    /**
+     * get heap array element
+     * @throws {@link errOutOfRange}
+     */
     get(i: number): T {
-        return this.h_[i]
+        const h = this.h_
+        if (i < 0 || i >= h.length) {
+            throw Exception.wrap(errOutOfRange, `index out of range [${i}]`)
+        }
+        return h[i]
     }
+    /**
+     * set heap array element
+     * @throws {@link errOutOfRange}
+     */
     set(i: number, val: T): void {
         const h = this.h_
+        if (i < 0 || i >= h.length) {
+            throw Exception.wrap(errOutOfRange, `index out of range [${i}]`)
+        }
         const o = h[i]
         h[i] = val
         const cf = this.opts_?.compare
@@ -128,10 +180,17 @@ export class Heap<T> extends Basic<T> {
         }
         fix(h, i, cf)
     }
-
-    constructor(opts?: Options<T>) {
+    constructor(opts?: Options<T>, heap?: Array<T>) {
         super(opts)
+        if (heap) {
+            this.h_ = heap
+        } else {
+            this.h_ = new Array<T>()
+        }
     }
+    /**
+     * Push pushes the element vals onto the heap.
+     */
     push(...vals: Array<T>) {
         if (vals.length == 0) {
             return
@@ -142,9 +201,18 @@ export class Heap<T> extends Basic<T> {
             push(h, v, cf)
         }
     }
+    /**
+     * Pop removes and returns the minimum element (according to cf or <) from the heap.
+     * @throws {@link errOutOfRange}
+     */
     pop(): T {
         return pop(this.h_, this.opts_?.compare, this.opts_?.remove)
     }
+    /**
+     * Remove removes and returns the element at index i from the heap.
+     * 
+     * @throws {@link errOutOfRange}
+     */
     remove(i: number): T {
         return remove(this.h_, i, this.opts_?.compare, this.opts_?.remove)
     }

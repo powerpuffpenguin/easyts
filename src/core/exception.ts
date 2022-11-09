@@ -69,3 +69,4 @@ class Wrap extends Exception {
     }
 }
 
+export const errOutOfRange = new Exception('out of range')
