@@ -24,16 +24,16 @@ export declare class WaitGroup {
     /**
      * Add adds delta, which may be negative, to the WaitGroup counter.
      * If the counter becomes zero, all goroutines blocked on Wait are released.
-     * If the counter goes negative, Add throws WaitGroupException.
+     * If the counter goes negative, Add throws Exception.
      * @param delta WaitGroup.counter += delta
      *
-     * @throws {@link WaitGroupException}
+     * @throws {@link Exception}
      */
     add(delta: number): void;
     /**
      * Done decrements the WaitGroup counter by one.
      *
-     * @throws {@link WaitGroupException}
+     * @throws {@link Exception}
      */
     done(): void;
     /**
