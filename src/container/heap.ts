@@ -1,7 +1,8 @@
 import { noResult } from "../core/values";
 import { CompareCallback, DeleteCallback, compare, CloneCallback } from "../core/types";
-import { Basic, Options } from "./types";
-import { Exception, errOutOfRange } from "../core";
+import { Basic, Options, Container } from "./types";
+import { Exception, errOutOfRange } from "../core/exception";
+
 function getIndex(i: number): number {
     if (i < 1) {
         return 0
@@ -115,7 +116,7 @@ export function remove<T>(h: Array<T>, i: number, cf?: CompareCallback<T>, rf?: 
     }
     return v
 }
-export class Heap<T> extends Basic<T> {
+export class Heap<T> extends Basic<T> implements Container<T> {
     /**
      * Initialize array to heap
      */

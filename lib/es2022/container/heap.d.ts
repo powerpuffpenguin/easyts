@@ -1,5 +1,5 @@
 import { CompareCallback, DeleteCallback, CloneCallback } from "../core/types";
-import { Basic, Options } from "./types";
+import { Basic, Options, Container } from "./types";
 /**
  * Initialize array to heap
  */
@@ -25,7 +25,7 @@ export declare function push<T>(h: Array<T>, val: T, cf?: CompareCallback<T>): v
  * @throws {@link errOutOfRange}
  */
 export declare function remove<T>(h: Array<T>, i: number, cf?: CompareCallback<T>, rf?: DeleteCallback<T>): T;
-export declare class Heap<T> extends Basic<T> {
+export declare class Heap<T> extends Basic<T> implements Container<T> {
     /**
      * Initialize array to heap
      */
