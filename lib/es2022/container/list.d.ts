@@ -38,8 +38,13 @@ export declare class List<T> extends Basic<T> implements Container<T> {
     private length_;
     /**
      * returns the length of the linked list
+     * @override
      */
     get length(): number;
+    /**
+     * returns the capacity of the linked list
+     * @override
+     */
     get capacity(): number;
     constructor(opts?: Options<T>);
     /**
@@ -135,6 +140,7 @@ export declare class List<T> extends Basic<T> implements Container<T> {
     /**
      * return js iterator
      * @param reverse If true, returns an iterator to traverse in reverse
+     * @override
      */
     iterator(reverse?: boolean): Iterator<T>;
     /**

@@ -88,10 +88,15 @@ export class List<T> extends Basic<T> implements Container<T>{
     private length_ = 0
     /**
      * returns the length of the linked list
+     * @override
      */
     get length(): number {
         return this.length_
     }
+    /**
+     * returns the capacity of the linked list
+     * @override
+     */
     get capacity(): number {
         return Number.MAX_SAFE_INTEGER
     }
@@ -318,6 +323,7 @@ export class List<T> extends Basic<T> implements Container<T>{
     /**
      * return js iterator
      * @param reverse If true, returns an iterator to traverse in reverse
+     * @override
      */
     iterator(reverse?: boolean): Iterator<T> {
         if (reverse) {

@@ -69,7 +69,6 @@ QUnit.module('sync', hooks => {
             flag = 2
 
             assert.false(m.tryLock())
-            console.log("call unlock")
             m.unlock()
             assert.throws(() => m.unlock(), errMutexUnlock)
         } finally {
