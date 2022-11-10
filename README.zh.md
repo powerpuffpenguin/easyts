@@ -18,6 +18,7 @@ js library written with ts
 * [module](#module)
     * [core](#core)
     * [container](#container)
+    * [context](#context)
     * [sync](#sync)
     * [time](#time)
 
@@ -257,6 +258,10 @@ container 目前包含下述內容：
 * List 一個參照 golang 標準庫實現的雙向鏈表
 * Heap 一個參照 golang 標準庫實現的最小/最大堆
 * Queue 一個固定長度數組實現的隊列
+
+## context
+
+[context](https://powerpuffpenguin.github.io/ts/easyts/modules/context.html) 完整模擬了 golang 標準庫中的 context，以便代碼可以更好的與 chan select 配合
 
 ## sync
 

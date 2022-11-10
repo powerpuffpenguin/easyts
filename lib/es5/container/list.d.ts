@@ -38,8 +38,13 @@ export declare class List<T> extends Basic<T> implements Container<T> {
     private length_;
     /**
      * returns the length of the linked list
+     * @override
      */
     get length(): number;
+    /**
+     * returns the capacity of the linked list
+     * @override
+     */
     get capacity(): number;
     constructor(opts?: Options<T>);
     /**
@@ -101,6 +106,18 @@ export declare class List<T> extends Basic<T> implements Container<T> {
      */
     remove(e: ListElement<T>, callback?: DeleteCallback<T>): boolean;
     /**
+     * If the list is not empty delete the element at the back
+     * @param callback call the callback on the removed element
+     * @returns deleted data
+     */
+    popBack(callback?: DeleteCallback<T>): IteratorResult<T>;
+    /**
+     * If the list is not empty delete the element at the front
+     * @param callback call the callback on the removed element
+     * @returns deleted data
+     */
+    popFront(callback?: DeleteCallback<T>): IteratorResult<T>;
+    /**
      * inserts a new element e with value v at the back of list and returns e.
      */
     pushBack(v: T): ListElement<T>;
@@ -135,6 +152,7 @@ export declare class List<T> extends Basic<T> implements Container<T> {
     /**
      * return js iterator
      * @param reverse If true, returns an iterator to traverse in reverse
+     * @override
      */
     iterator(reverse?: boolean): Iterator<T>;
     /**

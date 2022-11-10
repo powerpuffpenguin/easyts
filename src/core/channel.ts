@@ -158,6 +158,18 @@ export class Chan<T> implements ReadChannel<T>, WriteChannel<T> {
     static get never(): ReadChannel<any> {
         return Chan.never_ || (Chan.never_ = new Chan<any>())
     }
+    private static closed_: undefined | Chan<any>
+    /**
+     * Returns a alreay closed chan, usually used as some token
+     */
+    static get closed(): Chan<any> {
+        if (!Chan.closed_) {
+            Chan.closed_ = new Chan<any>()
+            Chan.closed_.close()
+        }
+        return Chan.closed_
+    }
+
     /**
      * Low-level read and write implementation
      * @internal

@@ -147,6 +147,11 @@ export declare class Chan<T> implements ReadChannel<T>, WriteChannel<T> {
      * Returns a chan that will never have a value, usually used as some token
      */
     static get never(): ReadChannel<any>;
+    private static closed_;
+    /**
+     * Returns a alreay closed chan, usually used as some token
+     */
+    static get closed(): Chan<any>;
     /**
      *
      * @params buffered size, if greater than 0 enable buffering for the channel

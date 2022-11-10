@@ -257,6 +257,10 @@ container currently contains the following:
 * Heap A min/max heap implemented with reference to the golang standard library
 * Queue A queue implemented as a fixed-length array
 
+## context
+
+[context](https://powerpuffpenguin.github.io/ts/easyts/modules/context.html) completely simulate the context in the golang standard library, so that the code can better work with chan select
+
 ## sync
 
 [sync](https://powerpuffpenguin.github.io/ts/easyts/modules/sync.html) implements some locks, and WaitGroup is used to wait for async to complete. Their interface signatures all refer to golang, but the implementation is not because js is single-threaded, so it is much easier to implement these than in golang. Although single-threaded race conditions do not occur, locks are also necessary if an operation involves multiple asynchronous processes at the same time. 
