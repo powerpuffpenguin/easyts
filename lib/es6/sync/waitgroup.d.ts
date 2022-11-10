@@ -27,13 +27,13 @@ export declare class WaitGroup {
      * If the counter goes negative, Add throws Exception.
      * @param delta WaitGroup.counter += delta
      *
-     * @throws {@link Exception}
+     * @throws {@link core.Exception}
      */
     add(delta: number): void;
     /**
      * Done decrements the WaitGroup counter by one.
      *
-     * @throws {@link Exception}
+     * @throws {@link core.Exception}
      */
     done(): void;
     /**

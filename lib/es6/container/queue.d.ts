@@ -31,12 +31,12 @@ export declare class Queue<T> extends Basic<T> {
     get capacity(): number;
     /**
      * get queue element
-     * @throws {@link errOutOfRange}
+     * @throws {@link core.errOutOfRange}
      */
     get(i: number): T;
     /**
      * set queue element
-     * @throws {@link errOutOfRange}
+     * @throws {@link core.errOutOfRange}
      */
     set(i: number, val: T): void;
     /**

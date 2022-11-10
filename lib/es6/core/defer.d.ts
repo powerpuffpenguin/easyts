@@ -54,6 +54,9 @@ export declare class DeferException extends Exception {
  * ```
  */
 export declare class Defer {
+    /**
+     * defer funcs
+     */
     private fs_;
     private constructor();
     /**
