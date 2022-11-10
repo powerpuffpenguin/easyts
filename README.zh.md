@@ -255,6 +255,8 @@ core 主要包含下述內容
 container 目前包含下述內容：
 
 * List 一個參照 golang 標準庫實現的雙向鏈表
+* Heap 一個參照 golang 標準庫實現的最小/最大堆
+* Queue 一個固定長度數組實現的隊列
 
 ## sync
 

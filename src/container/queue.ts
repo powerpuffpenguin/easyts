@@ -17,10 +17,10 @@ export class Queue<T> extends Basic<T> {
     private a_: Array<T>
     /**
      * 
-     * @param opts 
      * @param capacity if < 1 use default 10
+     * @param opts 
      */
-    constructor(opts?: Options<T>, capacity = 10) {
+    constructor(capacity = 10, opts?: Options<T>) {
         super(opts)
         capacity = Math.floor(capacity)
         if (capacity < 1) {
@@ -64,6 +64,10 @@ export class Queue<T> extends Basic<T> {
         }
         a[(this.offset_ + i) % a.length] = val
     }
+    /**
+     * inserts val at the back of queue
+     * @returns Returns true if successful, if queue is full do nothing and return false
+     */
     pushBack(val: T): boolean {
         const a = this.a_
         const size = this.size_
@@ -74,6 +78,10 @@ export class Queue<T> extends Basic<T> {
         this.size_++
         return true
     }
+    /**
+     * inserts val at the front of queue
+     * @returns Returns true if successful, if queue is full do nothing and return false
+     */
     pushFront(val: T): boolean {
         const a = this.a_
         const size = this.size_
@@ -88,6 +96,11 @@ export class Queue<T> extends Basic<T> {
         this.size_++
         return true
     }
+    /**
+     * If the queue is not empty delete the element at the front
+     * @param callback call the callback on the removed element
+     * @returns deleted data
+     */
     popFront(callback?: DeleteCallback<T>): IteratorResult<T> {
         const size = this.size_
         if (size == 0) {
@@ -107,6 +120,11 @@ export class Queue<T> extends Basic<T> {
             value: val,
         }
     }
+    /**
+     * If the queue is not empty delete the element at the back
+     * @param callback call the callback on the removed element
+     * @returns deleted data
+     */
     popBack(callback?: DeleteCallback<T>): IteratorResult<T> {
         const size = this.size_
         if (size == 0) {
@@ -122,6 +140,10 @@ export class Queue<T> extends Basic<T> {
             value: val,
         }
     }
+    /**
+     * clear the queue
+     * @param callback call the callback on the removed element
+     */
     clear(callback?: DeleteCallback<T>) {
         callback = callback ?? this.opts_?.remove
         if (callback) {
@@ -172,7 +194,7 @@ export class Queue<T> extends Basic<T> {
      * @param callback How to create a duplicate copy of an element 
      */
     clone(callback?: CloneCallback<T>): Queue<T> {
-        const l = new Queue<T>(this.opts_, this.a_.length)
+        const l = new Queue<T>(this.a_.length, this.opts_)
         callback = callback ?? this.opts_?.clone
         if (callback) {
             l.pushList(this, callback)

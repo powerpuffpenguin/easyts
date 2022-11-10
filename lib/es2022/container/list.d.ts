@@ -106,6 +106,18 @@ export declare class List<T> extends Basic<T> implements Container<T> {
      */
     remove(e: ListElement<T>, callback?: DeleteCallback<T>): boolean;
     /**
+     * If the list is not empty delete the element at the back
+     * @param callback call the callback on the removed element
+     * @returns deleted data
+     */
+    popBack(callback?: DeleteCallback<T>): IteratorResult<T>;
+    /**
+     * If the list is not empty delete the element at the front
+     * @param callback call the callback on the removed element
+     * @returns deleted data
+     */
+    popFront(callback?: DeleteCallback<T>): IteratorResult<T>;
+    /**
      * inserts a new element e with value v at the back of list and returns e.
      */
     pushBack(v: T): ListElement<T>;

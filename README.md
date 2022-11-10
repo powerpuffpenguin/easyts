@@ -254,6 +254,8 @@ core mainly contains the following contents
 container currently contains the following:
 
 * List A doubly linked list implemented with reference to the golang standard library
+* Heap A min/max heap implemented with reference to the golang standard library
+* Queue A queue implemented as a fixed-length array
 
 ## sync
 

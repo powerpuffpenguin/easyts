@@ -221,7 +221,7 @@ export class Basic<T> implements Iterable<T>{
     get reverse(): Iterable<T> {
         const i = this.iterator(true)
         return {
-            *[Symbol.iterator]() {
+            [Symbol.iterator]() {
                 return i
             }
         }
