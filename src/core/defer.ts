@@ -91,6 +91,9 @@ export class DeferException extends Exception {
  * ```
  */
 export class Defer {
+    /**
+     * defer funcs
+     */
     private fs_ = new Array<Func>()
     private constructor() { }
     /**
@@ -200,6 +203,7 @@ export class Defer {
         })
     }
 }
+
 interface Func {
     f: (...args: Array<any>) => void
     args: Array<any>

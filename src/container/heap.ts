@@ -55,7 +55,7 @@ function down<T>(h: Array<T>, i0: number, n: number, cf?: CompareCallback<T>): b
 }
 /**
  * Fix re-establishes the heap ordering after the element at index i has changed its value.
- * @throws {@link errOutOfRange}
+ * @throws {@link core.errOutOfRange}
  */
 export function fix<T>(h: Array<T>, i: number, cf?: CompareCallback<T>) {
     if (i < 0 || i >= h.length) {
@@ -68,7 +68,7 @@ export function fix<T>(h: Array<T>, i: number, cf?: CompareCallback<T>) {
 /**
  * Pop removes and returns the minimum element (according to cf or <) from the heap.
  * 
- * @throws {@link errOutOfRange}
+ * @throws {@link core.errOutOfRange}
  */
 export function pop<T>(h: Array<T>, cf?: CompareCallback<T>, rf?: DeleteCallback<T>): T {
     const n = h.length - 1;
@@ -96,7 +96,7 @@ export function push<T>(h: Array<T>, val: T, cf?: CompareCallback<T>) {
 /**
  * Remove removes and returns the element at index i from the heap.
  * 
- * @throws {@link errOutOfRange}
+ * @throws {@link core.errOutOfRange}
  */
 export function remove<T>(h: Array<T>, i: number, cf?: CompareCallback<T>, rf?: DeleteCallback<T>): T {
     if (i < 0 || i >= h.length) {
@@ -155,7 +155,7 @@ export class Heap<T> extends Basic<T> implements Container<T> {
     }
     /**
      * get heap array element
-     * @throws {@link errOutOfRange}
+     * @throws {@link core.errOutOfRange}
      */
     get(i: number): T {
         const h = this.h_
@@ -166,7 +166,7 @@ export class Heap<T> extends Basic<T> implements Container<T> {
     }
     /**
      * set heap array element
-     * @throws {@link errOutOfRange}
+     * @throws {@link core.errOutOfRange}
      */
     set(i: number, val: T): void {
         const h = this.h_
@@ -204,7 +204,7 @@ export class Heap<T> extends Basic<T> implements Container<T> {
     }
     /**
      * Pop removes and returns the minimum element (according to cf or <) from the heap.
-     * @throws {@link errOutOfRange}
+     * @throws {@link core.errOutOfRange}
      */
     pop(): T {
         return pop(this.h_, this.opts_?.compare, this.opts_?.remove)
@@ -212,7 +212,7 @@ export class Heap<T> extends Basic<T> implements Container<T> {
     /**
      * Remove removes and returns the element at index i from the heap.
      * 
-     * @throws {@link errOutOfRange}
+     * @throws {@link core.errOutOfRange}
      */
     remove(i: number): T {
         return remove(this.h_, i, this.opts_?.compare, this.opts_?.remove)

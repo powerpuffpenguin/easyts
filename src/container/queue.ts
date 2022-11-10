@@ -44,7 +44,7 @@ export class Queue<T> extends Basic<T> {
     }
     /**
      * get queue element
-     * @throws {@link errOutOfRange}
+     * @throws {@link core.errOutOfRange}
      */
     get(i: number): T {
         const a = this.a_
@@ -55,7 +55,7 @@ export class Queue<T> extends Basic<T> {
     }
     /**
      * set queue element
-     * @throws {@link errOutOfRange}
+     * @throws {@link core.errOutOfRange}
      */
     set(i: number, val: T): void {
         const a = this.a_
