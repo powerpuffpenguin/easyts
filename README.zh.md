@@ -245,6 +245,7 @@ core 主要包含下述內容
 
 * 對 golang 語言的 chan 和 select 的完整模擬
 * 對 golang 語言的 defer 提供了模擬支持
+* 參照 golang 實現了一個 Slice 模板類
 * 定義了一個 class Exception 來提供類似 golang 的錯誤識別
 * 參照 dart 的 Completer 爲 Promise 實現了一個 Completer
 * 參考 c++ boost 實現了一個 signals/slots 

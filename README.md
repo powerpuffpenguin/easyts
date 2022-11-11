@@ -243,6 +243,7 @@ core mainly contains the following contents
 
 * A complete simulation of chan and select in golang language
 * Mock support for defer in golang language
+* Implemented a Slice template class with reference to golang
 * A class Exception is defined to provide golang-like error recognition
 * Implement a Completer for Promise with reference to dartlang's Completer
 * Refer to c++ boost to implement a signals/slots

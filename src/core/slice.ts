@@ -1,5 +1,5 @@
 import { errOutOfRange, Exception } from "./exception";
-import { compare, CompareCallback, MapCallback, ValidCallback, ValueCallback } from "./types";
+import { compare, CompareCallback, MapCallback, ValidCallback, ValueCallback, VoidCallback } from "./types";
 import { noResult } from "./values";
 
 export const errLenOutOfRange = Exception.wrap(errOutOfRange, 'makeslice: len out of range')
@@ -255,5 +255,22 @@ export class Slice<T> {
      */
     join(separator?: string | undefined): string {
         return this.map((v) => `${v}`).join(separator)
+    }
+}
+
+/**
+ * Combined into a construct cache
+ */
+export class StringBuilder {
+    private a = new Array<string>()
+    constructor() { }
+    write(...vals: Array<any>) {
+        this.a.push(...vals)
+    }
+    undo(): string | undefined {
+        return this.a.pop()
+    }
+    toString(): string {
+        return this.a.join('')
     }
 }

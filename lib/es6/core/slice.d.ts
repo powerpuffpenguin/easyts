@@ -97,13 +97,17 @@ export declare class Slice<T> {
      */
     join(separator?: string | undefined): string;
 }
-/**
- * Combined into a construct cache
- */
-export declare class StringBuilder {
-    private a;
-    constructor();
-    write(...vals: Array<any>): void;
-    undo(): string | undefined;
+export declare class Bytes {
+    private readonly buffer;
+    private readonly start;
+    private readonly end;
+    static fromString(str: string): Bytes;
+    /**
+     * Create a slice
+     * @throws {@link core.errOutOfRange}
+     * @throws {@link core.errOutOfRange}
+     */
+    static make(length: number, capacity?: number): Bytes;
+    private constructor();
     toString(): string;
 }
