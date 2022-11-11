@@ -1,6 +1,7 @@
 import './core/signals_test';
 import './core/channel_test';
 import './core/defer_test';
+import './core/slice_test';
 import './container/list_test';
 import './container/heap_test';
 import './container/queue_test';

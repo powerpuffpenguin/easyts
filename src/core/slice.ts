@@ -1,4 +1,5 @@
 import { errOutOfRange, Exception } from "./exception";
+import { compare, CompareCallback, MapCallback, ValidCallback, ValueCallback } from "./types";
 import { noResult } from "./values";
 
 export const errLenOutOfRange = Exception.wrap(errOutOfRange, 'makeslice: len out of range')
@@ -29,7 +30,7 @@ function checkSlice(start: number, end: number, cap: number) {
 }
 export class Slice<T> {
     /**
-     * 
+     * Creates a slice attached to the incoming array
      * @throws {@link core.errOutOfRange} 
      */
     static attach<T>(a: Array<T>, start?: number, end?: number): Slice<T> {
@@ -43,11 +44,12 @@ export class Slice<T> {
         return new Slice(a, start, end)
     }
     /**
+     * Create a slice
      * @throws {@link core.errOutOfRange}
      * @throws {@link core.errOutOfRange}
      */
-    static make<T>(length: number, capacity: number): Slice<T> {
-        if (length == undefined || !isFinite(length) || length < 0 || length != Math.floor(length)) {
+    static make<T>(length: number, capacity?: number): Slice<T> {
+        if (!isFinite(length) || length < 0 || length != Math.floor(length)) {
             throw errLenOutOfRange
         }
         if (capacity === undefined) {
@@ -56,26 +58,41 @@ export class Slice<T> {
             throw errCapOutOfRange
         }
         const a = new Array<T>(capacity)
-        return new Slice<T>(a, 0, a.length)
+        return new Slice<T>(a, 0, length)
     }
     private constructor(public readonly array: Array<T>,
         public readonly start: number,
         public readonly end: number,
     ) { }
+    /**
+     * Returns the element at index i in the slice
+     */
     get(i: number): T {
         checkIndex(i, this.length)
         return this.array[this.start + i]
     }
+    /**
+     * Sets the element at index i in the slice to val
+     */
     set(i: number, val: T): void {
         checkIndex(i, this.length)
         this.array[this.start + i] = val
     }
+    /**
+     * return slice length
+     */
     get length(): number {
         return this.end - this.start
     }
+    /**
+     * return slice capacity
+     */
     get capacity(): number {
-        return this.array.length - (this.end - this.start)
+        return this.array.length - this.start
     }
+    /**
+     * take sub-slices
+     */
     slice(start?: number, end?: number): Slice<T> {
         if (start === undefined) {
             start = 0
@@ -85,8 +102,11 @@ export class Slice<T> {
         }
         checkSlice(start, end, this.capacity)
         const o = this.start
-        return new Slice(this.array, o + this.start, o + end)
+        return new Slice(this.array, o + start, o + end)
     }
+    /**
+     * Add a new element at the end of the slice and return the new slice
+     */
     append(...vals: Array<T>): Slice<T> {
         const add = vals.length
         if (add == 0) {
@@ -162,108 +182,78 @@ export class Slice<T> {
             }
         }
     }
-}
 
-export class StringSlice {
     /**
+     * call callback on each element in the container in turn
+     * @param callback 
+     * @param reverse If true, traverse the container in reverse order
      * 
-     * @throws {@link core.errOutOfRange} 
+     * @virtual
      */
-    static attach(a: string, start?: number, end?: number): StringSlice {
-        if (start === undefined) {
-            start = 0
-        }
-        if (end === undefined) {
-            end = a.length
-        }
-        checkSlice(start, end, a.length)
-        return new StringSlice(a, start, end)
-    }
-    private constructor(public readonly array: string,
-        public readonly start: number,
-        public readonly end: number,
-    ) { }
-    get(i: number): string {
-        checkIndex(i, this.length)
-        return this.array[this.start + i]
-    }
-    get length(): number {
-        return this.end - this.start
-    }
-    get capacity(): number {
-        return this.array.length - (this.end - this.start)
-    }
-    slice(start?: number, end?: number): StringSlice {
-        if (start === undefined) {
-            start = 0
-        }
-        if (end === undefined) {
-            end = this.end
-        }
-        checkSlice(start, end, this.capacity)
-        const o = this.start
-        return new StringSlice(this.array, o + this.start, o + end)
-    }
-    append(str: string): StringSlice {
-        const add = str.length
-        if (add == 0) {
-            return new StringSlice(this.array, this.start, this.end)
-        }
-        str = this.array + str
-        return new StringSlice(str, 0, str.length)
-    }
-    /**
-     * return js iterator
-     * @param reverse If true, returns an iterator to traverse in reverse
-     * @override
-     */
-    iterator(reverse?: boolean): Iterator<string> {
-        const a = this.array
-        let start = this.start
-        let end = this.end
-        if (reverse) {
-            let i = end - 1
-            return {
-                next() {
-                    if (i >= start) {
-                        return {
-                            value: a[i--],
-                        }
-                    }
-                    return noResult
-                }
-            }
-        } else {
-            let i = start
-            return {
-                next() {
-                    if (i < end) {
-                        return {
-                            value: a[i++],
-                        }
-                    }
-                    return noResult
-                }
-            }
+    forEach(callback: ValueCallback<T>, reverse?: boolean): void {
+        const it = reverse ? this.reverse : this
+        for (const v of it) {
+            callback(v)
         }
     }
     /**
-     * implements js Iterable
-     * @sealedl
+     * Traverse the container looking for elements until the callback returns true, then stop looking
+     * 
+     * @param callback Determine whether it is the element to be found
+     * @param reverse If true, traverse the container in reverse order
+     * @returns whether the element was found
+     * 
+     * @virtual
      */
-    [Symbol.iterator](): Iterator<string> {
-        return this.iterator()
-    }
-    /**
-     * Returns an object that implements a js Iterable, but it traverses the data in reverse
-     * @sealed
-     */
-    get reverse(): Iterable<string> {
-        const i = this.iterator(true)
-        return {
-            [Symbol.iterator]() {
-                return i
+    find(callback: ValidCallback<T>, reverse?: boolean): boolean {
+        const it = reverse ? this.reverse : this
+        for (const v of it) {
+            if (callback(v)) {
+                return true
             }
         }
+        return false
+    }
+    /**
+     * Convert container to array
+     * @param callback 
+     * @param reverse If true, traverse the container in reverse order
+     * 
+     * @virtual
+     */
+    map<TO>(callback: MapCallback<T, TO>, reverse?: boolean): Array<TO> {
+        const length = this.length
+        if (length == 0) {
+            return new Array<TO>()
+        }
+        const it = reverse ? this.reverse : this
+        const result = new Array<TO>(length)
+        let i = 0
+        for (const v of it) {
+            result[i++] = callback(v)
+        }
+        return result
+    }
+    /**
+     * Returns whether the data data exists in the container
+     * 
+     * @virtual
+     */
+    has(data: T, reverse?: boolean, callback?: CompareCallback<T>): boolean {
+        const it = reverse ? this.reverse : this
+        for (const v of it) {
+            if (compare(data, v, callback) == 0) {
+                return true
+            }
+        }
+        return false
+    }
+    /**
+     * Adds all the elements of an container into a string, separated by the specified separator string.
+     * @param separator 
+     * @param separator A string used to separate one element of the container from the next in the resulting string. If omitted, the array elements are separated with a comma.
+     */
+    join(separator?: string | undefined): string {
+        return this.map((v) => `${v}`).join(separator)
     }
 }
