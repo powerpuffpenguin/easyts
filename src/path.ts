@@ -31,8 +31,6 @@ class lazybuf {
 }
 
 
-
-
 /**
  * Join joins any number of path elements into a single path,  separating them with slashes. Empty elements are ignored. The result is Cleaned. However, if the argument list is  empty or all its elements are empty, Join returns an empty string.
  */
@@ -100,7 +98,7 @@ export function clean(path: string): string {
         } else {
             // real path element.
             // add slash if needed
-            if ((rooted && out.w != 1) || (!rooted && out.w != 0)) {
+            if (rooted && out.w != 1 || !rooted && out.w != 0) {
                 out.append('/')
             }
             // copy element
@@ -204,3 +202,4 @@ export function dir(path: string): string {
 export function isAbs(path: string): boolean {
     return path.length > 0 && path[0] == '/'
 }
+

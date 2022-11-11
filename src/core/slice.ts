@@ -28,6 +28,9 @@ function checkSlice(start: number, end: number, cap: number) {
         throw Exception.wrap(errOutOfRange, `slice bounds out of range [${start}:${end}]`)
     }
 }
+export interface Source<T> extends Iterable<T> {
+    readonly length: number
+}
 export class Slice<T> {
     /**
      * Creates a slice attached to the incoming array
@@ -103,6 +106,21 @@ export class Slice<T> {
         checkSlice(start, end, this.capacity)
         const o = this.start
         return new Slice(this.array, o + start, o + end)
+    }
+    copy(src: Source<T>): number {
+        const n = this.length < src.length ? this.length : src.length
+        if (n != 0) {
+            let i = 0
+            let start = this.start
+            const arr = this.array
+            for (const v of src) {
+                arr[start + i++] = v
+                if (i == n) {
+                    break
+                }
+            }
+        }
+        return n
     }
     /**
      * Add a new element at the end of the slice and return the new slice
