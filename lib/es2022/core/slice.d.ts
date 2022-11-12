@@ -2,6 +2,9 @@ import { Exception } from "./exception";
 import { CompareCallback, MapCallback, ValidCallback, ValueCallback } from "./types";
 export declare const errLenOutOfRange: Exception;
 export declare const errCapOutOfRange: Exception;
+export interface Source<T> extends Iterable<T> {
+    readonly length: number;
+}
 export declare class Slice<T> {
     readonly array: Array<T>;
     readonly start: number;
@@ -38,6 +41,7 @@ export declare class Slice<T> {
      * take sub-slices
      */
     slice(start?: number, end?: number): Slice<T>;
+    copy(src: Source<T>): number;
     /**
      * Add a new element at the end of the slice and return the new slice
      */
