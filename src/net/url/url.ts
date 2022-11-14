@@ -26,8 +26,10 @@ export class EscapeException extends Exception {
     }
 }
 
-
-enum Encode {
+/**
+ * @internal
+ */
+export enum Encode {
     Path = 1,
     PathSegment,
     Host,
@@ -129,7 +131,10 @@ function escape(s0: string, mode: Encode): string {
     }
     return new TextDecoder().decode(t)
 }
-function shouldEscape(c: number, mode: Encode): boolean {
+/**
+ * @internal
+ */
+export function shouldEscape(c: number, mode: Encode): boolean {
     // §2.3 Unreserved characters (alphanum)
     // if ('a' <= c && c <= 'z' || 'A' <= c && c <= 'Z' || '0' <= c && c <= '9') {
     if (97 <= c && c <= 122 || 65 <= c && c <= 90 || 48 <= c && c <= 57) {
@@ -352,14 +357,189 @@ function unescape(s0: string, mode: Encode): string {
 }
 
 /**
+ * resolvePath applies special path segments from refs and applies them to base, per RFC 3986.
+ * @internal
+ */
+export function resolvePath(base: string, ref: string): string {
+    let full: string
+    if (ref == "") {
+        full = base
+    } else if (ref[0] != '/') {
+        let i = base.lastIndexOf("/")
+        full = base.substring(0, i + 1) + ref
+    } else {
+        full = ref
+    }
+    if (full == "") {
+        return ""
+    }
+
+    let elem = ''
+    let dst = new Array<string>()
+    let first = true
+    let remaining = full
+    // We want to return a leading '/', so write it now.
+    dst.push('/')
+    let found = true
+    while (found) {
+        // 	elem, remaining, found = strings.Cut(remaining, "/")
+        const i = remaining.indexOf('/')
+        found = i >= 0
+        if (found) {
+            elem = remaining.substring(0, i)
+            remaining = remaining.substring(i + 1)
+        } else {
+            elem = remaining
+            remaining = ''
+        }
+        if (elem == ".") {
+            first = false
+            // drop
+            continue
+        }
+
+        if (elem == "..") {
+            // Ignore the leading '/' we already wrote.
+            let str = dst.join('').substring(1)
+            let index = str.lastIndexOf('/')
+
+            dst.splice(0, dst.length)
+            dst.push('/')
+            if (index == -1) {
+                first = true
+            } else {
+                dst.push(str.substring(0, index))
+            }
+        } else {
+            if (!first) {
+                dst.push('/')
+            }
+            dst.push(elem)
+            first = false
+        }
+    }
+
+    if (elem == "." || elem == "..") {
+        dst.push('/')
+    }
+
+    // We wrote an initial '/', but we don't want two.
+    let r = dst.join('')
+    if (r.length > 1 && r[1] == '/') {
+        r = r.substring(1)
+    }
+    return r
+}
+
+export interface ValuesObject {
+    [key: string]: Array<string> | string
+}
+interface cutResult {
+    b: string
+    a: string
+    f?: boolean
+}
+function stringsCut(s: string, sep: string): cutResult {
+    const i = s.indexOf(sep)
+    return i >= 0 ? {
+        b: s.substring(0, i),
+        a: s.substring(i + sep.length),
+        f: true,
+    } : {
+        b: s,
+        a: ''
+    }
+}
+/**
  * It is typically used for query parameters and form values.
  * the keys in a Values map are case-sensitive.
  */
 export class Values {
+    /**
+     * parses the URL-encoded query string and returns a map listing the values specified for each key.
+     * @param errs set errors encountered to this array
+     * @param first If true then errs will only log the first error encountered
+     * @returns always returns a non-nil map containing all the valid query parameters found
+     */
+    static parse(query: string, errs?: Array<Exception>, first = true): Values {
+        const m = new Values(new Map<string, Array<string>>())
+        let key: string
+        let value: string
+        let cut: cutResult
+        let n = errs?.length ?? 0
+        while (query != "") {
+            cut = stringsCut(query, '&')
+            key = cut.b
+            query = cut.a
+            if (key.indexOf(';') >= 0) {
+                if (errs) {
+                    if (!first || n == errs.length) {
+                        errs.push(new Exception('invalid semicolon separator in query'))
+                    }
+                }
+                continue
+            }
+            if (key == "") {
+                continue
+            }
+            cut = stringsCut(key, '=')
+            key = cut.b
+            value = cut.a
+            try {
+                key = queryUnescape(key)
+            } catch (e) {
+                if (errs) {
+                    if (!first || n == errs.length) {
+                        errs.push(e as any)
+                    }
+                }
+                continue
+            }
+            try {
+                value = queryUnescape(value)
+            } catch (e) {
+                if (errs) {
+                    if (!first || n == errs.length) {
+                        errs.push(e as any)
+                    }
+                }
+                continue
+            }
+            m.add(key, value)
+        }
+        return m
+    }
+    /**
+     * convert Object to Values
+     */
+    static fromObject(obj: ValuesObject) {
+        const m = new Map<string, Array<string>>()
+        for (const key in obj) {
+            if (Object.prototype.hasOwnProperty.call(obj, key)) {
+                const v = obj[key]
+                if (Array.isArray(v)) {
+                    m.set(key, v)
+                } else {
+                    m.set(key, [v])
+                }
+            }
+        }
+        return new Values(m)
+    }
+    /**
+     * map listing
+     */
     readonly m: Map<string, Array<string>>
     constructor(m?: Map<string, Array<string>>) {
         this.m = m ?? new Map<string, Array<string>>()
     }
+    /**
+     * return keys.length
+     */
+    get length(): number {
+        return this.m.size
+    }
+
     /**
      * gets the first value associated with the given key.
      * to access multiple values, use the map directly.
@@ -378,6 +558,21 @@ export class Values {
         this.m.set(key, vals)
     }
     /**
+     * sets the key to vals. It replaces any existing
+     */
+    setObject(obj: ValuesObject): void {
+        for (const key in obj) {
+            if (Object.prototype.hasOwnProperty.call(obj, key)) {
+                const v = obj[key]
+                if (Array.isArray(v)) {
+                    this.set(key, ...v)
+                } else {
+                    this.set(key, v)
+                }
+            }
+        }
+    }
+    /**
      * adds the value to key. It appends to any existing values associated with key.
      */
     add(key: string, ...vals: Array<string>): void {
@@ -388,6 +583,31 @@ export class Values {
         } else {
             m.set(key, vals)
         }
+    }
+    /**
+     * adds the value to key. It appends to any existing values associated with key.
+     */
+    addObject(obj: ValuesObject): void {
+        for (const key in obj) {
+            if (Object.prototype.hasOwnProperty.call(obj, key)) {
+                const v = obj[key]
+                if (Array.isArray(v)) {
+                    this.add(key, ...v)
+                } else {
+                    this.add(key, v)
+                }
+            }
+        }
+    }
+    /**
+     * convert Values to Object
+     */
+    object(): ValuesObject {
+        const m: ValuesObject = {}
+        this.m.forEach((v, k) => {
+            m[k] = v
+        })
+        return m
     }
     /**
      * deletes the values associated with key.
@@ -418,7 +638,7 @@ export class Values {
                 this._encode(buf, k, vs)
             })
         }
-        return buf.toString()
+        return buf.join('')
     }
     private _encode(buf: Array<string>, k: string, vs: Array<string>) {
         k = queryEscape(k)

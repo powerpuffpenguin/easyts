@@ -30,13 +30,34 @@ export declare function queryUnescape(s: string): string;
  * @throws {@link EscapeException}
  */
 export declare function pathUnescape(s: string): string;
+export interface ValuesObject {
+    [key: string]: Array<string> | string;
+}
 /**
  * It is typically used for query parameters and form values.
  * the keys in a Values map are case-sensitive.
  */
 export declare class Values {
+    /**
+     * parses the URL-encoded query string and returns a map listing the values specified for each key.
+     * @param errs set errors encountered to this array
+     * @param first If true then errs will only log the first error encountered
+     * @returns always returns a non-nil map containing all the valid query parameters found
+     */
+    static parse(query: string, errs?: Array<Exception>, first?: boolean): Values;
+    /**
+     * convert Object to Values
+     */
+    static fromObject(obj: ValuesObject): Values;
+    /**
+     * map listing
+     */
     readonly m: Map<string, Array<string>>;
     constructor(m?: Map<string, Array<string>>);
+    /**
+     * return keys.length
+     */
+    get length(): number;
     /**
      * gets the first value associated with the given key.
      * to access multiple values, use the map directly.
@@ -47,9 +68,21 @@ export declare class Values {
      */
     set(key: string, ...vals: Array<string>): void;
     /**
+     * sets the key to vals. It replaces any existing
+     */
+    setObject(obj: ValuesObject): void;
+    /**
      * adds the value to key. It appends to any existing values associated with key.
      */
     add(key: string, ...vals: Array<string>): void;
+    /**
+     * adds the value to key. It appends to any existing values associated with key.
+     */
+    addObject(obj: ValuesObject): void;
+    /**
+     * convert Values to Object
+     */
+    object(): ValuesObject;
     /**
      * deletes the values associated with key.
      */
