@@ -1,9 +1,35 @@
+import { Exception } from "../../core";
 import { CompareCallback } from "../../core/types";
+export declare class InvalidHostException extends Exception {
+    private constructor();
+}
+export declare class EscapeException extends Exception {
+    private constructor();
+}
 /**
  * escapes the string so it can be safely placed inside a URL query.
  */
 export declare function queryEscape(s: string): string;
+/**
+ * escapes the string so it can be safely placed inside a URL path segment, replacing special characters (including /) with %XX sequences as needed.
+ */
 export declare function pathEscape(s: string): string;
+/**
+ * QueryUnescape does the inverse transformation of QueryEscape, converting each 3-byte encoded substring of the form "%AB" into the hex-decoded byte 0xAB.
+ *
+ * It throw an error if any % is not followed by two hexadecimal digits.
+ *
+ * @throws {@link EscapeException}
+ */
+export declare function queryUnescape(s: string): string;
+/**
+ * pathUnescape does the inverse transformation of pathEscape, converting each 3-byte encoded substring of the form "%AB" into the  hex-decoded byte 0xAB. It throw an error if any % is not followed  by two hexadecimal digits.
+ *
+ * pathUnescape is identical to queryUnescape except that it does not  unescape '+' to ' ' (space).
+ *
+ * @throws {@link EscapeException}
+ */
+export declare function pathUnescape(s: string): string;
 /**
  * It is typically used for query parameters and form values.
  * the keys in a Values map are case-sensitive.

@@ -1,5 +1,5 @@
 import { Exception } from "../../core";
-import { pathEscape, queryEscape } from "./url";
+import { EscapeException, pathEscape, pathUnescape, queryEscape, queryUnescape } from "./url";
 
 interface EscapeTest {
     in: string
@@ -48,6 +48,92 @@ QUnit.module('url', hooks => {
         for (const test of tests) {
             const v = pathEscape(test.in)
             assert.equal(v, test.out, test.in)
+        }
+    })
+    QUnit.test('unescape', (assert) => {
+        const tests = [
+            escapeTest("", ""),
+            escapeTest("abc", "abc"),
+            escapeTest("1%41", "1A"),
+            escapeTest("1%41%42%43", "1ABC"),
+            escapeTest("%4a", "J"),
+            escapeTest("%6F", "o"),
+            escapeTest(
+                "%", // not enough characters after %
+                "",
+                EscapeException.make("%")
+            ),
+            escapeTest(
+                "%a", // not enough characters after %
+                "",
+                EscapeException.make("%a"),
+            ),
+            escapeTest(
+                "%1", // not enough characters after %
+                "",
+                EscapeException.make("%1"),
+            ),
+            escapeTest(
+                "123%45%6", // not enough characters after %
+                "",
+                EscapeException.make("%6"),
+            ),
+            escapeTest(
+                "%zzzzz", // invalid hex digits
+                "",
+                EscapeException.make("%zz"),
+            ),
+            escapeTest("a+b", "a b"),
+            escapeTest("a%20b", "a b"),
+        ]
+        for (const test of tests) {
+            try {
+                const actual = queryUnescape(test.in)
+                assert.equal(actual, test.out)
+            } catch (e) {
+                if (e instanceof Exception) {
+                    assert.equal(e.error(), test.err!.error())
+                } else {
+                    assert.false(true, `${test.in} not throw Exception`)
+                }
+            }
+
+            let input = test.in
+            let out = test.out
+            if (input.indexOf("+") != -1) {
+                input = input.replace(/\+/g, "%20")
+                try {
+                    let actual = pathUnescape(input)
+                    assert.equal(actual, test.out)
+                } catch (e) {
+                    if (e instanceof Exception) {
+                        assert.equal(e.error(), test.err!.error())
+                    } else {
+                        assert.false(true, `${test.in} not throw Exception`)
+                    }
+                }
+                if (!test.err) {
+                    try {
+                        let s = queryUnescape(test.in.replace(/\+/g, 'XXX'))
+                        input = test.in
+                        out = s.replace(/XXX/g, "+")
+                    } catch (_) {
+                        continue
+                    }
+                }
+            }
+
+
+            try {
+                let actual = pathUnescape(input)
+                assert.equal(actual, out)
+            } catch (e) {
+                if (e instanceof Exception) {
+                    assert.equal(e.error(), test.err!.error())
+                } else {
+                    assert.false(true, `${test.in} not throw Exception`)
+                }
+            }
         }
     })
 })

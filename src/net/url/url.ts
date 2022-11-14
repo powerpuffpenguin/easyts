@@ -1,5 +1,31 @@
-import { Slice } from "../../core/slice";
+import { Exception } from "../../core";
 import { CompareCallback } from "../../core/types";
+
+export class InvalidHostException extends Exception {
+    /**
+     * 
+     * @internal
+     */
+    static make(str: string): InvalidHostException {
+        return new InvalidHostException(`invalid character ${str} in host name`)
+    }
+    private constructor(msg: string) {
+        super(msg)
+    }
+}
+export class EscapeException extends Exception {
+    /**
+     * 
+     * @internal
+     */
+    static make(str: string): EscapeException {
+        return new EscapeException(`invalid URL escape ${str}`)
+    }
+    private constructor(msg: string) {
+        super(msg)
+    }
+}
+
 
 enum Encode {
     Path = 1,
@@ -14,13 +40,41 @@ enum Encode {
  * "0123456789ABCDEF"
  */
 const upperhex = [48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 65, 66, 67, 68, 69, 70]
+function ishex(c: number): boolean {
+    return (48 <= c && c <= 57) //  '0' <= c && c <= '9'
+        || (97 <= c && c <= 102) // 'a' <= c && c <= 'f'
+        || (65 <= c && c <= 70) // 'A' <= c && c <= 'F'
+}
+function unhex(c: number): number {
+    if (48 <= c && c <= 57) { //  '0' <= c && c <= '9'
+        return c - 48 // return c - '0'
+    } else if (97 <= c && c <= 102) {//   case 'a' <= c && c <= 'f'
+        return c - 97 + 10 // c - 'a' + 10
+    } else if (65 <= c && c <= 70) { // 'A' <= c && c <= 'F'
+        return c - 65 + 10 // c - 'A' + 10
+    }
+    return 0
+}
+function bytesEqual(l: ArrayLike<number>, r: ArrayLike<number>): boolean {
+    if (l.length != r.length) {
+        return false
+    }
+    for (let i = 0; i < l.length; i++) {
+        if (l[i] != r[i]) {
+            return false
+        }
+    }
+    return true
+}
 /**
  * escapes the string so it can be safely placed inside a URL query.
  */
 export function queryEscape(s: string): string {
     return escape(s, Encode.QueryComponent)
 }
-// escapes the string so it can be safely placed inside a URL path segment, replacing special characters (including /) with %XX sequences as needed.
+/**
+ * escapes the string so it can be safely placed inside a URL path segment, replacing special characters (including /) with %XX sequences as needed.
+ */
 export function pathEscape(s: string): string {
     return escape(s, Encode.PathSegment)
 }
@@ -185,6 +239,118 @@ function shouldEscape(c: number, mode: Encode): boolean {
     // Everything else must be escaped.
     return true
 }
+/**
+ * QueryUnescape does the inverse transformation of QueryEscape, converting each 3-byte encoded substring of the form "%AB" into the hex-decoded byte 0xAB.
+ * 
+ * It throw an error if any % is not followed by two hexadecimal digits.
+ * 
+ * @throws {@link EscapeException}
+ */
+export function queryUnescape(s: string): string {
+    return unescape(s, Encode.QueryComponent)
+}
+/**
+ * pathUnescape does the inverse transformation of pathEscape, converting each 3-byte encoded substring of the form "%AB" into the  hex-decoded byte 0xAB. It throw an error if any % is not followed  by two hexadecimal digits.
+ * 
+ * pathUnescape is identical to queryUnescape except that it does not  unescape '+' to ' ' (space).
+ * 
+ * @throws {@link EscapeException}
+ */
+export function pathUnescape(s: string): string {
+    return unescape(s, Encode.PathSegment)
+}
+function unescape(s0: string, mode: Encode): string {
+    // Count %, check that they're well-formed.
+    let s = new TextEncoder().encode(s0)
+    let n = 0
+    let hasPlus = false
+    for (let i = 0; i < s.length;) {
+        switch (s[i]) {
+            case 37: //'%'
+                n++
+                if (i + 2 >= s.length
+                    || !ishex(s[i + 1])
+                    || !ishex(s[i + 2])
+                ) {
+                    s = s.subarray(i)
+                    if (s.length > 3) {
+                        s = s.subarray(0, 3)
+                    }
+                    throw EscapeException.make(new TextDecoder().decode(s))
+                }
+                // Per https://tools.ietf.org/html/rfc3986#page-21
+                // in the host component %-encoding can only be used
+                // for non-ASCII bytes.
+                // But https://tools.ietf.org/html/rfc6874#section-2
+                // introduces %25 being allowed to escape a percent sign
+                // in IPv6 scoped-address literals. Yay.
+                if (mode == Encode.Host
+                    && unhex(s[i + 1]) < 8
+                    && !bytesEqual(s.subarray(i, i + 3), [37, 50, 53]) // s[i: i + 3] != "%25"
+                ) {
+                    throw EscapeException.make(new TextDecoder().decode(s.subarray(i, i + 3)))
+                }
+                if (mode == Encode.Zone) {
+                    // RFC 6874 says basically "anything goes" for zone identifiers
+                    // and that even non-ASCII can be redundantly escaped,
+                    // but it seems prudent to restrict %-escaped bytes here to those
+                    // that are valid host name bytes in their unescaped form.
+                    // That is, you can use escaping in the zone identifier but not
+                    // to introduce bytes you couldn't just write directly.
+                    // But Windows puts spaces here! Yay.
+                    let v = unhex(s[i + 1]) << 4 | unhex(s[i + 2])
+                    if (!bytesEqual(s.subarray(i, i + 3), [37, 50, 53]) // s[i: i + 3] != "%25"
+                        && v != 32 // v != ' '
+                        && shouldEscape(v, Encode.Host)
+                    ) {
+                        throw EscapeException.make(new TextDecoder().decode(s.subarray(i, i + 3)))
+                    }
+                }
+                i += 3
+                break
+            case 43://'+'
+                hasPlus = mode == Encode.QueryComponent
+                i++
+                break
+            default:
+                if ((mode == Encode.Host || mode == Encode.Zone)
+                    && s[i] < 0x80
+                    && shouldEscape(s[i], mode)) {
+                    throw InvalidHostException.make(new TextDecoder().decode(s.subarray(i, i + 1)))
+
+                }
+                i++
+                break
+        }
+    }
+
+    if (n == 0 && !hasPlus) {
+        return s0
+    }
+    const t = new Uint8Array(s.length - 2 * n)
+    let j = 0
+    for (let i = 0; i < s.length; i++) {
+        const c = s[i]
+        switch (c) {
+            case 37: // '%'
+                t[j++] = unhex(s[i + 1]) << 4 | unhex(s[i + 2])
+                i += 2
+                break
+            case 43:// '+'
+                if (mode == Encode.QueryComponent) {
+                    t[j++] = 32 // ' '
+                } else {
+                    t[j++] = c
+                }
+                break
+            default:
+                t[j++] = c
+                break
+        }
+    }
+    return new TextDecoder().decode(t)
+}
+
 /**
  * It is typically used for query parameters and form values.
  * the keys in a Values map are case-sensitive.
