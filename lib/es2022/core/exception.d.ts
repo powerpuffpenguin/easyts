@@ -29,6 +29,8 @@ export declare class Exception {
      * wrap the exception e into a new exception
      */
     static wrap(e: Exception, msg: string): Exception;
+    timeout(): boolean;
+    temporary(): boolean;
 }
 export declare type ExceptionConstructor<T extends Exception> = new (...args: any[]) => T;
 export declare const errOutOfRange: Exception;

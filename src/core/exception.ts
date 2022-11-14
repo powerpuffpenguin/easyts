@@ -58,6 +58,12 @@ export class Exception {
     static wrap(e: Exception, msg: string): Exception {
         return new Wrap(e, msg)
     }
+    timeout(): boolean {
+        return false
+    }
+    temporary(): boolean {
+        return false
+    }
 }
 export type ExceptionConstructor<T extends Exception> = new (...args: any[]) => T
 class Wrap extends Exception {

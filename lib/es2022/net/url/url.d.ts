@@ -97,3 +97,52 @@ export declare class Values {
     encode(sortKey?: CompareCallback<string> | boolean): string;
     private _encode;
 }
+/**
+ * The Userinfo type is an immutable encapsulation of username and password details for a URL. An existing Userinfo value is guaranteed to have a username set (potentially empty, as allowed by RFC 2396), and optionally a password.
+ */
+export declare class Userinfo {
+    readonly username: string;
+    readonly password?: string | undefined;
+    constructor(username: string, password?: string | undefined);
+    toString(): string;
+}
+export declare class URL {
+    /**
+     * parses a raw url into a URL class.
+     *
+     * @remarks
+     * The url may be relative (a path, without a host) or absolute (starting with a scheme). Trying to parse a hostname and path without a scheme is invalid but may not necessarily return an error, due to parsing ambiguities.
+     *
+     * @throws {@link URLException}
+     * @throws {@link Exception}
+     */
+    static parse(rawURL: string): URL;
+    /**
+     * parses a raw url into a URL class.
+     *
+     * @remarks
+     * It assumes that url was received in an HTTP request, so the url is interpreted only as an absolute URI or an absolute path.
+     * The string url is assumed not to have a #fragment suffix.
+     * (Web browsers strip #fragment before sending the URL to a web server.)
+     *
+     * @throws {@link URLException}
+     * @throws {@link Exception}
+     */
+    static parseRequestURI(rawURL: string): URL;
+    private static _parse;
+    private constructor();
+    scheme: string;
+    /**
+     * encoded opaque data
+     */
+    opaque: string;
+    user?: Userinfo;
+    host: string;
+    path: string;
+    rawPath?: string;
+    forceQuery: boolean;
+    rawQuery?: string;
+    fragment: string;
+    rawFragment?: string;
+    setFragment(f: string): void;
+}

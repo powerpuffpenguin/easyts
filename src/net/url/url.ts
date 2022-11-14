@@ -26,6 +26,29 @@ export class EscapeException extends Exception {
     }
 }
 
+class URLException extends Exception {
+    constructor(
+        public op: string,
+        public url: string,
+        public err: any,
+    ) {
+        super('ParseError')
+    }
+    unwrap(): undefined | Exception {
+        return this.err
+    }
+    error(): string {
+        return `${this.op} '${this.url}': ${this.err.error()}`
+    }
+    timeout(): boolean {
+        return this.err.timeout()
+    }
+    temporary(): boolean {
+        return this.err.temporary()
+    }
+}
+
+
 /**
  * @internal
  */
@@ -439,16 +462,12 @@ interface cutResult {
     a: string
     f?: boolean
 }
-function stringsCut(s: string, sep: string): cutResult {
+function stringsCut(s: string, sep: string): Array<string> {
     const i = s.indexOf(sep)
-    return i >= 0 ? {
-        b: s.substring(0, i),
-        a: s.substring(i + sep.length),
-        f: true,
-    } : {
-        b: s,
-        a: ''
+    if (i >= 0) {
+        return [s.substring(0, i), s.substring(i + sep.length), "1"]
     }
+    return [s, '', ""]
 }
 /**
  * It is typically used for query parameters and form values.
@@ -468,9 +487,7 @@ export class Values {
         let cut: cutResult
         let n = errs?.length ?? 0
         while (query != "") {
-            cut = stringsCut(query, '&')
-            key = cut.b
-            query = cut.a
+            [key, query] = stringsCut(query, '&')
             if (key.indexOf(';') >= 0) {
                 if (errs) {
                     if (!first || n == errs.length) {
@@ -482,9 +499,7 @@ export class Values {
             if (key == "") {
                 continue
             }
-            cut = stringsCut(key, '=')
-            key = cut.b
-            value = cut.a
+            [key, value] = stringsCut(key, '=')
             try {
                 key = queryUnescape(key)
             } catch (e) {
@@ -642,9 +657,341 @@ export class Values {
     }
     private _encode(buf: Array<string>, k: string, vs: Array<string>) {
         k = queryEscape(k)
-        let s: string
         for (const v of vs) {
             buf.push(buf.length > 0 ? `&${k}=${queryEscape(v)}` : `${k}=${queryEscape(v)}`)
         }
+    }
+}
+
+/**
+ * The Userinfo type is an immutable encapsulation of username and password details for a URL. An existing Userinfo value is guaranteed to have a username set (potentially empty, as allowed by RFC 2396), and optionally a password.
+ */
+export class Userinfo {
+    constructor(public readonly username: string, public readonly password?: string) { }
+    toString(): string {
+        let s = escape(this.username, Encode.UserPassword)
+        const pwd = this.password
+        if (pwd) {
+            s += ":" + escape(pwd, Encode.UserPassword)
+        }
+        return s
+    }
+}
+function stringContainsCTLByte(s: string): boolean {
+    for (const b of new TextEncoder().encode(s)) {
+        if (b < 32 || b == 0x7f) {
+            return true
+        }
+    }
+    return false
+}
+// Maybe rawURL is of the form scheme:path.
+// (Scheme must be [a-zA-Z][a-zA-Z0-9+-.]*)
+// If so, return scheme, path; else return "", rawURL.
+function getScheme(rawURL: string): Array<string> {
+    for (let i = 0; i < rawURL.length; i++) {
+        const c = rawURL.charCodeAt(i)
+        if (97 <= c && c <= 122 || 65 <= c && c <= 90) {// 'a' <= c && c <= 'z' || 'A' <= c && c <= 'Z'
+            // do nothing
+        } else if (48 <= c && c <= 57 || c == 43 || c == 45 || c == 46) {// '0' <= c && c <= '9' || c == '+' || c == '-' || c == '.'
+            if (i == 0) {
+                return ["", rawURL]
+            }
+        } else if (c == 58) {// c==':'
+            if (i == 0) {
+                throw new Exception('missing protocol scheme')
+            }
+            return [rawURL.substring(0, i), rawURL.substring(i + 1)]
+        } else {
+            // we have encountered an invalid character,
+            // so there is no valid scheme
+            break
+        }
+    }
+    return ["", rawURL]
+}
+interface Authority {
+    user?: Userinfo
+    host: string
+}
+function parseAuthority(authority: string): Authority {
+    let host: string
+    let i = authority.indexOf("@")
+    if (i < 0) {
+        host = parseHost(authority)
+        return {
+            host: host
+        }
+    } else {
+        host = parseHost(authority.substring(i + 1))
+    }
+
+    let userinfo = authority.substring(0, i)
+    if (!validUserinfo(userinfo)) {
+        throw new Exception('net/url: invalid userinfo')
+    }
+    let user: undefined | Userinfo
+    if (userinfo.indexOf(':') < 0) {
+        userinfo = unescape(userinfo, Encode.UserPassword)
+        user = new Userinfo(userinfo)
+    } else {
+        const [username, password] = stringsCut(userinfo, ":")
+        user = new Userinfo(
+            unescape(username, Encode.UserPassword),
+            unescape(password, Encode.UserPassword)
+        )
+    }
+    return {
+        user: user,
+        host: host
+    }
+}
+function parseHost(host: string): string {
+    if (host.startsWith('[')) {
+        // Parse an IP-Literal in RFC 3986 and RFC 6874.
+        // E.g., "[fe80::1]", "[fe80::1%25en0]", "[fe80::1]:80".
+        const i = host.lastIndexOf(']')
+        if (i < 0) {
+            throw new Exception("missing ']' in host")
+        }
+        const colonPort = host.substring(i + 1)
+        if (!validOptionalPort(colonPort)) {
+            throw new Exception(`invalid port ${colonPort} after host`)
+        }
+
+        // RFC 6874 defines that %25 (%-encoded percent) introduces
+        // the zone identifier, and the zone identifier can use basically
+        // any %-encoding it likes. That's different from the host, which
+        // can only %-encode non-ASCII bytes.
+        // We do impose some restrictions on the zone, to avoid stupidity
+        // like newlines.
+        const zone = host.substring(0, i).indexOf("%25")
+        if (zone >= 0) {
+            const host1 = unescape(host.substring(0, zone), Encode.Host)
+            const host2 = unescape(host.substring(zone, i), Encode.Zone)
+            const host3 = unescape(host.substring(i), Encode.Host)
+            return host1 + host2 + host3
+        }
+    } else {
+        const i = host.lastIndexOf(':')
+        if (i != -1) {
+            const colonPort = host.substring(i)
+            if (!validOptionalPort(colonPort)) {
+                throw new Exception(`invalid port ${colonPort} after host`)
+            }
+        }
+    }
+    return unescape(host, Encode.Host)
+}
+function validOptionalPort(port: string): boolean {
+    if (port == "") {
+        return true
+    }
+    if (port[0] != ':') {
+        return false
+    }
+    for (let i = 1; i < port.length; i++) {
+        const b = port[i].charCodeAt(i)
+        if (b < 48 || b > 57) { // b < '0' || b > '9'
+            return false
+        }
+    }
+    return true
+}
+// validUserinfo reports whether s is a valid userinfo string per RFC 3986
+// Section 3.2.1:
+//     userinfo    = *( unreserved / pct-encoded / sub-delims / ":" )
+//     unreserved  = ALPHA / DIGIT / "-" / "." / "_" / "~"
+//     sub-delims  = "!" / "$" / "&" / "'" / "(" / ")"
+//                   / "*" / "+" / "," / ";" / "="
+//
+// It doesn't validate pct-encoded. The caller does that via func unescape.
+function validUserinfo(s: string): boolean {
+    for (let i = 0; i < s.length; i++) {
+        const r = s.charCodeAt(i)
+        if (65 <= r && r <= 90) {// ('A' <= r && r <= 'Z')
+            continue
+        }
+        if (97 <= r && r <= 122) { // 'a' <= r && r <= 'z'
+            continue
+        }
+        if (48 <= r && r <= 57) { // '0' <= r && r <= '9'
+            continue
+        }
+        switch (r) {
+            case 45: // -
+            case 46: // .
+            case 95: // _
+            case 58: // :
+            case 126: // ~
+            case 33: // !
+            case 36: // $
+            case 38: // &
+            case 39: // '
+            case 40: // (
+            case 41: // )
+            case 42: // *
+            case 43: // +
+            case 44: // ,
+            case 59: // ;
+            case 61: // =
+            case 37: // %
+            case 64: // @
+                break
+            default:
+                return false
+        }
+    }
+    return true
+}
+export class URL {
+    /**
+     * parses a raw url into a URL class.
+     * 
+     * @remarks
+     * The url may be relative (a path, without a host) or absolute (starting with a scheme). Trying to parse a hostname and path without a scheme is invalid but may not necessarily return an error, due to parsing ambiguities.
+     * 
+     * @throws {@link URLException}
+     * @throws {@link Exception}
+     */
+    static parse(rawURL: string): URL {
+        // Cut off #frag
+        const [u, frag] = stringsCut(rawURL, "#")
+        let url: URL
+        try {
+            url = URL._parse(u, false)
+        } catch (e) {
+            throw new URLException(
+                "parse", u, e
+            )
+        }
+        if (frag != "") {
+            try {
+                url.setFragment(frag)
+            } catch (e) {
+                throw new URLException(
+                    "parse", u, e
+                )
+            }
+        }
+        return url
+    }
+
+
+    /**
+     * parses a raw url into a URL class. 
+     * 
+     * @remarks
+     * It assumes that url was received in an HTTP request, so the url is interpreted only as an absolute URI or an absolute path.
+     * The string url is assumed not to have a #fragment suffix.
+     * (Web browsers strip #fragment before sending the URL to a web server.)
+     * 
+     * @throws {@link URLException}
+     * @throws {@link Exception}
+     */
+    static parseRequestURI(rawURL: string): URL {
+        try {
+            return URL._parse(rawURL, true)
+        } catch (e) {
+            throw new URLException(
+                "parse", rawURL, e
+            )
+        }
+    }
+    private static _parse(rawURL: string, viaRequest: boolean): URL {
+        let rest = ''
+
+        if (stringContainsCTLByte(rawURL)) {
+            throw new Exception('net/url: invalid control character in URL')
+        }
+
+        if (rawURL == "" && viaRequest) {
+            throw new Exception('empty url')
+        }
+        const url = new URL()
+
+        if (rawURL == "*") {
+            url.path = "*"
+            return url
+        }
+
+        // Split off possible leading "http:", "mailto:", etc.
+        // Cannot contain escaped characters.
+        [url.scheme, rest] = getScheme(rawURL)
+        url.scheme = url.scheme.toLowerCase()
+
+        if (rest.endsWith('?') && rest.indexOf('?') != rest.length - 1) {
+            url.forceQuery = true
+            rest = rest.substring(0, rest.length - 1)
+        } else {
+            [rest, url.rawQuery] = stringsCut(rest, '?')
+        }
+
+        if (rest.startsWith('/')) {
+            if (url.scheme != "") {
+                // We consider rootless paths per RFC 3986 as opaque.
+                url.opaque = rest
+                return url
+            }
+            if (viaRequest) {
+                throw new Exception('invalid URI for request')
+            }
+
+            // Avoid confusion with malformed schemes, like cache_object:foo/bar.
+            // See golang.org/issue/16822.
+            //
+            // RFC 3986, §3.3:
+            // In addition, a URI reference (Section 4.1) may be a relative-path reference,
+            // in which case the first path segment cannot contain a colon (":") character.
+            const [segment] = stringsCut(rest, "/")
+            if (segment.indexOf(':') >= 0) {
+                // First path segment has colon. Not allowed in relative URL.
+                throw new Exception('first path segment in URL cannot contain colon')
+            }
+        }
+
+        if (url.scheme != ""
+            || !viaRequest && !rest.startsWith("///") && rest.startsWith("//")
+        ) {
+            let authority = rest.substring(2)
+            rest = ''
+
+            const i = authority.indexOf('/')
+            if (i >= 0) {
+                [authority, rest] = [authority.substring(0, i), authority.substring(i)]
+            }
+            const obj = parseAuthority(authority)
+            url.user = obj.user
+            url.host = obj.host
+        }
+
+        // Set Path and, optionally, RawPath.
+        // RawPath is a hint of the encoding of Path. We don't want to set it if
+        // the default escaping of Path is equivalent, to help make sure that people
+        // don't rely on it in general.
+        url.setPath(rest)
+
+        return url
+    }
+    private constructor() { }
+    scheme = ''
+    /**
+     * encoded opaque data
+     */
+    opaque = ''
+    user?: Userinfo // username and password information
+    host = ''    // host or host:port
+    path = ''    // path (relative paths may omit leading slash)
+    rawPath?: string    // encoded path hint (see EscapedPath method)
+    forceQuery = false      // append a query ('?') even if RawQuery is empty
+    rawQuery?: string   // encoded query values, without '?'
+    fragment = ''    // fragment for references, without '#'
+    rawFragment?: string    // encoded fragment hint (see EscapedFragment method)
+
+    setFragment(f: string): void {
+
+    }
+    setPath(p: string): void {
+
     }
 }
