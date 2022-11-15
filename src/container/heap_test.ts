@@ -69,12 +69,12 @@ QUnit.module('container.heap', hooks => {
         const h = new Heap<number>({
             compare: cf
         })
-        const v = [
-            6247, 2823, 7701,
-            3833, 7142, 2041,
-            3831, 3796, 564,
-            7575
-        ]
+        // const v = [
+        //     6247, 2823, 7701,
+        //     3833, 7142, 2041,
+        //     3831, 3796, 564,
+        //     7575
+        // ]
         h.pushList(random(100))
         checkHeap(assert, h.map((v) => v), false, (l, r) => r - l)
 
@@ -90,4 +90,5 @@ QUnit.module('container.heap', hooks => {
             checkHeap(assert, h.map((v) => v), false, cf)
         }
     })
+
 })

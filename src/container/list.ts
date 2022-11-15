@@ -362,11 +362,16 @@ export class List<T> extends Basic<T> implements Container<T>{
     iterator(reverse?: boolean): Iterator<T> {
         if (reverse) {
             let current = this.back()
+            const front = this.front()
             return {
                 next() {
                     if (current) {
                         const data = current.data!
-                        current = current.prev()
+                        if (current == front) {
+                            current = undefined // fix pushFrontList(this)
+                        } else {
+                            current = current.prev()
+                        }
                         return {
                             value: data,
                         }
@@ -376,11 +381,16 @@ export class List<T> extends Basic<T> implements Container<T>{
             }
         } else {
             let current = this.front()
+            const back = this.back()
             return {
                 next() {
                     if (current) {
                         const data = current.data!
-                        current = current.next()
+                        if (current == back) {
+                            current = undefined // fix pushBackList(this)
+                        } else {
+                            current = current.next()
+                        }
                         return {
                             value: data,
                         }
