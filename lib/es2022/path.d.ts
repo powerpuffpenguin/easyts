@@ -15,15 +15,11 @@ export declare function ext(path: string): string;
  * @returns If the path is empty, Base returns ".". If the path consists entirely of slashes, Base returns "/".
  */
 export declare function base(path: string): string;
-export interface DirFile {
-    dir: string;
-    file: string;
-}
 /**
  * splits path immediately following the final slash, separating it into a directory and file name component.  If there is no slash in path, Split returns an empty dir and file set to path.
- * @returns The returned values have the property that path = dir+file.
+ * @returns [dir,file] The returned values have the property that path = dir+file.
  */
-export declare function split(path: string): DirFile;
+export declare function split(path: string): Array<string>;
 /**
  * returns all but the last element of path, typically the path's directory.
  *

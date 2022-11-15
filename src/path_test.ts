@@ -59,6 +59,20 @@ QUnit.module('path', hooks => {
             assert.equal(v1, test[1], test[1])
         }
     })
+    QUnit.test('split', (assert) => {
+        const tests = [
+            ["a/b", "a/", "b"],
+            ["a/b/", "a/b/", ""],
+            ["a/", "a/", ""],
+            ["a", "", "a"],
+            ["/", "/", ""],
+        ]
+        for (const test of tests) {
+            const [dir, file] = split(test[0])
+            assert.equal(dir, test[1])
+            assert.equal(file, test[2])
+        }
+    })
     QUnit.test('join', (assert) => {
         const tests = [
             // zero parameters
@@ -139,8 +153,8 @@ QUnit.module('path', hooks => {
         }
 
         for (const test of tests) {
-            const v = split(test[0])
-            assert.equal(v.dir + v.file, test[0], test[0])
+            const [dir, file] = split(test[0])
+            assert.equal(dir + file, test[0], test[0])
         }
     })
     QUnit.test('isAbs', (assert) => {

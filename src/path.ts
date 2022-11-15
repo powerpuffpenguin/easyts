@@ -156,26 +156,21 @@ export function base(path: string): string {
     }
     return start == 0 && end == path.length ? path : path.substring(start, end)
 }
-export interface DirFile {
-    dir: string
-    file: string
-}
 /**
  * splits path immediately following the final slash, separating it into a directory and file name component.  If there is no slash in path, Split returns an empty dir and file set to path.
- * @returns The returned values have the property that path = dir+file.
+ * @returns [dir,file] The returned values have the property that path = dir+file.
  */
-export function split(path: string): DirFile {
+export function split(path: string): Array<string> {
     let end = path.length
     let start = end - 1
     while (start >= 0 && path[start] != '/') {
         start--
     }
     start++
-
-    return {
-        dir: start == 0 ? '' : path.substring(0, start),
-        file: start == 0 ? path : path.substring(start)
-    }
+    return [
+        start == 0 ? '' : path.substring(0, start),
+        start == 0 ? path : path.substring(start)
+    ]
 }
 
 /**
