@@ -160,7 +160,7 @@ function escape(s0: string, mode: Encode): string {
 export function shouldEscape(c: number, mode: Encode): boolean {
     // §2.3 Unreserved characters (alphanum)
     // if ('a' <= c && c <= 'z' || 'A' <= c && c <= 'Z' || '0' <= c && c <= '9') {
-    if (97 <= c && c <= 122 || 65 <= c && c <= 90 || 48 <= c && c <= 57) {
+    if ((97 <= c && c <= 122) || (65 <= c && c <= 90) || (48 <= c && c <= 57)) {
         return false
     }
 
@@ -661,7 +661,7 @@ export class Values {
  * The Userinfo type is an immutable encapsulation of username and password details for a URL. An existing Userinfo value is guaranteed to have a username set (potentially empty, as allowed by RFC 2396), and optionally a password.
  */
 export class Userinfo {
-    constructor(public readonly username: string, public readonly password?: string) { }
+    constructor(public readonly username: string, public readonly password = '') { }
     /**
      * 
      * @param redacted If true replaces any password with "xxxxx".
@@ -669,11 +669,11 @@ export class Userinfo {
      */
     toString(redacted = false): string {
         let s = escape(this.username, Encode.UserPassword)
-        if (redacted) {
-            s += ':' + 'xxxxx'
-        } else {
-            const pwd = this.password
-            if (pwd) {
+        const pwd = this.password
+        if (pwd.length != 0) {
+            if (redacted) {
+                s += ':' + 'xxxxx'
+            } else {
                 s += ':' + escape(pwd, Encode.UserPassword)
             }
         }
@@ -694,9 +694,9 @@ function stringContainsCTLByte(s: string): boolean {
 function getScheme(rawURL: string): Array<string> {
     for (let i = 0; i < rawURL.length; i++) {
         const c = rawURL.charCodeAt(i)
-        if (97 <= c && c <= 122 || 65 <= c && c <= 90) {// 'a' <= c && c <= 'z' || 'A' <= c && c <= 'Z'
+        if ((97 <= c && c <= 122) || (65 <= c && c <= 90)) {// 'a' <= c && c <= 'z' || 'A' <= c && c <= 'Z'
             // do nothing
-        } else if (48 <= c && c <= 57 || c == 43 || c == 45 || c == 46) {// '0' <= c && c <= '9' || c == '+' || c == '-' || c == '.'
+        } else if ((48 <= c && c <= 57) || c == 43 || c == 45 || c == 46) {// '0' <= c && c <= '9' || c == '+' || c == '-' || c == '.'
             if (i == 0) {
                 return ["", rawURL]
             }
@@ -719,7 +719,7 @@ interface Authority {
 }
 function parseAuthority(authority: string): Authority {
     let host: string
-    let i = authority.indexOf("@")
+    let i = authority.lastIndexOf("@")
     if (i < 0) {
         host = parseHost(authority)
         return {
@@ -794,7 +794,7 @@ function validOptionalPort(port: string): boolean {
         return false
     }
     for (let i = 1; i < port.length; i++) {
-        const b = port[i].charCodeAt(i)
+        const b = port.charCodeAt(i)
         if (b < 48 || b > 57) { // b < '0' || b > '9'
             return false
         }
@@ -902,6 +902,7 @@ function splitHostPort(hostPort: string): Array<string> {
     }
     return [host, port]
 }
+
 export class URL {
     /**
      * parses a raw url into a URL class.
@@ -977,15 +978,14 @@ export class URL {
         // Cannot contain escaped characters.
         [url.scheme, rest] = getScheme(rawURL)
         url.scheme = url.scheme.toLowerCase()
-
-        if (rest.endsWith('?') && rest.indexOf('?') != rest.length - 1) {
+        if (rest.endsWith('?') && rest.indexOf('?') == rest.length - 1) {
             url.forceQuery = true
             rest = rest.substring(0, rest.length - 1)
         } else {
             [rest, url.rawQuery] = stringsCut(rest, '?')
         }
 
-        if (rest.startsWith('/')) {
+        if (!rest.startsWith('/')) {
             if (url.scheme != "") {
                 // We consider rootless paths per RFC 3986 as opaque.
                 url.opaque = rest
@@ -1007,9 +1007,9 @@ export class URL {
                 throw new Exception('first path segment in URL cannot contain colon')
             }
         }
-
-        if (url.scheme != ""
-            || !viaRequest && !rest.startsWith("///") && rest.startsWith("//")
+        if (
+            (url.scheme != '' || !viaRequest && !rest.startsWith('///'))
+            && rest.startsWith('//')
         ) {
             let authority = rest.substring(2)
             rest = ''
@@ -1031,7 +1031,7 @@ export class URL {
 
         return url
     }
-    private constructor() { }
+    constructor() { }
     scheme = ''
     /**
      * encoded opaque data

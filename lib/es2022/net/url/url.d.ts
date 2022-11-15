@@ -42,7 +42,7 @@ export declare class Values {
      * parses the URL-encoded query string and returns a map listing the values specified for each key.
      * @param errs set errors encountered to this array
      * @param first If true then errs will only log the first error encountered
-     * @returns always returns a non-nil map containing all the valid query parameters found
+     * @returns always returns a map containing all the valid query parameters found
      */
     static parse(query: string, errs?: Array<Exception>, first?: boolean): Values;
     /**
@@ -102,9 +102,14 @@ export declare class Values {
  */
 export declare class Userinfo {
     readonly username: string;
-    readonly password?: string | undefined;
-    constructor(username: string, password?: string | undefined);
-    toString(): string;
+    readonly password: string;
+    constructor(username: string, password?: string);
+    /**
+     *
+     * @param redacted If true replaces any password with "xxxxx".
+     * @returns
+     */
+    toString(redacted?: boolean): string;
 }
 export declare class URL {
     /**
@@ -130,7 +135,7 @@ export declare class URL {
      */
     static parseRequestURI(rawURL: string): URL;
     private static _parse;
-    private constructor();
+    constructor();
     scheme: string;
     /**
      * encoded opaque data
@@ -139,10 +144,114 @@ export declare class URL {
     user?: Userinfo;
     host: string;
     path: string;
-    rawPath?: string;
+    rawPath: string;
     forceQuery: boolean;
-    rawQuery?: string;
+    rawQuery: string;
     fragment: string;
-    rawFragment?: string;
-    setFragment(f: string): void;
+    rawFragment: string;
+    /**
+     * @throws {@link EscapeException}
+     */
+    private _setFragment;
+    /**
+     * @throws {@link EscapeException}
+     */
+    private _setPath;
+    /**
+     * returns the escaped form of this.fragment.
+     *
+     * @remarks
+     * In general there are multiple possible escaped forms of any fragment.
+     * escapedFragment() returns this.rawFragment when it is a valid escaping of this.fragment.
+     * Otherwise escapedFragment() ignores this.rawFragment and computes an escaped form on its own.
+     *
+     * The toString method uses escapedFragment() to construct its result.
+     * In general, code should call EscapedFragment instead of reading this.rawFragment directly.
+     */
+    escapedFragment(): string;
+    /**
+     * returns the escaped form of this.path.
+     *
+     * @remarks
+     * In general there are multiple possible escaped forms of any path.
+     * escapedPath() returns this.rawPath when it is a valid escaping of this.path.
+     * Otherwise escapedPath() ignores this.rawPath and computes an escaped form on its own.
+     *
+     * The toString and RequestURI method uses escapedPath() to construct its result.
+     * In general, code should call escapedPath instead of reading this.rawPath directly.
+     */
+    escapedPath(): string;
+    /**
+     * returns this.host, stripping any valid port number if present.
+     * @remarks
+     * If the result is enclosed in square brackets, as literal IPv6 addresses are, the square brackets are removed from the result.
+     */
+    hostname(): string;
+    /**
+     * returns the port part of this.host, without the leading colon.
+     * @remarks
+     * If this.host doesn't contain a valid numeric port, Port returns an undefined.
+     */
+    port(): undefined | string;
+    get isAbs(): boolean;
+    /**
+     * parses rawQuery and returns the corresponding values.
+     * @param errs set errors encountered to this array
+     * @param first If true then errs will only log the first error encountered
+     * @returns always returns a map containing all the valid query parameters found
+     */
+    query(errs?: Array<Exception>, first?: boolean): Values;
+    /**
+     * returns the encoded path?query or opaque?query string
+     */
+    requestURI(): string;
+    /**
+     * reassembles the URL into a valid URL string.
+     *
+     * @remarks
+     * The general form of the result is one of:
+     *
+     * 1. scheme:opaque?query#fragment
+     * 2. scheme://userinfo@host/path?query#fragment
+     *
+     * If this.opaque is non-empty, toString uses the first form; otherwise it uses the second form.
+     * Any non-ASCII characters in host are escaped.
+     * To obtain the path, toString uses this.escapedPath().
+     *
+     * In the second form, the following rules apply:
+     * - if this.scheme is empty, scheme: is omitted.
+     * - if this.user is nil, userinfo@ is omitted.
+     * - if this.host is empty, host/ is omitted.
+     * - if this.scheme and u.Host are empty and u.User is nil, the entire scheme://userinfo@host/ is omitted.
+     * - if this.host is non-empty and u.Path begins with a /, the form host/path does not add its own /.
+     * - if this.rawQuery is empty, ?query is omitted.
+     * - if this.fragment is empty, #fragment is omitted.
+     *
+     * @param redacted If true replaces any password with "xxxxx".
+     */
+    toString(redacted?: boolean): string;
+    /**
+     * resolves a URI reference to an absolute URI from an absolute base URI this, per RFC 3986 Section 5.2.
+     *
+     * @remarks
+     * The URI reference may be relative or absolute. resolveReference always returns a new URL instance, even if the returned URL is identical to either the base or reference.
+     * If ref is an absolute URL, then resolveReference ignores base and returns a copy of ref.
+     */
+    resolveReference(ref: URL): URL;
+    /**
+     * return this.resolveReference(URL.parse(ref))
+     */
+    parse(ref: string): URL;
+    /**
+     * Create a full copy of the URL
+     */
+    clone(): URL;
+    /**
+     * marshal to binary
+     */
+    marshalBinary(): Uint8Array;
+    /**
+     * unmarshal from binary
+     */
+    unmarshalBinary(input: BufferSource): void;
 }

@@ -3,7 +3,9 @@
     "entryPoints": [
         "src/container.ts",
         "src/core.ts",
+        "src/net/url.ts",
         "src/sync.ts",
+        "src/path.ts",
         "src/time.ts",
     ],
     "out": "powerpuffpenguin.github.io/ts/easyts"
