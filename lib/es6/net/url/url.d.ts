@@ -6,6 +6,16 @@ export declare class InvalidHostException extends Exception {
 export declare class EscapeException extends Exception {
     private constructor();
 }
+export declare class URLException extends Exception {
+    op: string;
+    url: string;
+    err: any;
+    constructor(op: string, url: string, err: any);
+    unwrap(): undefined | Exception;
+    error(): string;
+    timeout(): boolean;
+    temporary(): boolean;
+}
 /**
  * escapes the string so it can be safely placed inside a URL query.
  */
@@ -119,7 +129,7 @@ export declare class URL {
      * The url may be relative (a path, without a host) or absolute (starting with a scheme). Trying to parse a hostname and path without a scheme is invalid but may not necessarily return an error, due to parsing ambiguities.
      *
      * @throws {@link URLException}
-     * @throws {@link Exception}
+     * @throws {@link core.Exception}
      */
     static parse(rawURL: string): URL;
     /**
@@ -131,7 +141,7 @@ export declare class URL {
      * (Web browsers strip #fragment before sending the URL to a web server.)
      *
      * @throws {@link URLException}
-     * @throws {@link Exception}
+     * @throws {@link core.Exception}
      */
     static parseRequestURI(rawURL: string): URL;
     private static _parse;
