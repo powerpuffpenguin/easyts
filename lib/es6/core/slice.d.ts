@@ -2,6 +2,9 @@ import { Exception } from "./exception";
 import { CompareCallback, MapCallback, ValidCallback, ValueCallback } from "./types";
 export declare const errLenOutOfRange: Exception;
 export declare const errCapOutOfRange: Exception;
+export interface Source<T> extends Iterable<T> {
+    readonly length: number;
+}
 export declare class Slice<T> {
     readonly array: Array<T>;
     readonly start: number;
@@ -38,6 +41,7 @@ export declare class Slice<T> {
      * take sub-slices
      */
     slice(start?: number, end?: number): Slice<T>;
+    copy(src: Source<T>): number;
     /**
      * Add a new element at the end of the slice and return the new slice
      */
@@ -97,17 +101,13 @@ export declare class Slice<T> {
      */
     join(separator?: string | undefined): string;
 }
-export declare class Bytes {
-    private readonly buffer;
-    private readonly start;
-    private readonly end;
-    static fromString(str: string): Bytes;
-    /**
-     * Create a slice
-     * @throws {@link core.errOutOfRange}
-     * @throws {@link core.errOutOfRange}
-     */
-    static make(length: number, capacity?: number): Bytes;
-    private constructor();
+/**
+ * Combined into a construct cache
+ */
+export declare class StringBuilder {
+    private a;
+    constructor();
+    write(...vals: Array<any>): void;
+    undo(): string | undefined;
     toString(): string;
 }
