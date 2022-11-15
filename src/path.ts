@@ -98,7 +98,7 @@ export function clean(path: string): string {
         } else {
             // real path element.
             // add slash if needed
-            if (rooted && out.w != 1 || !rooted && out.w != 0) {
+            if ((rooted && out.w != 1) || (!rooted && out.w != 0)) {
                 out.append('/')
             }
             // copy element
