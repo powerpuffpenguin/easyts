@@ -457,11 +457,6 @@ export function resolvePath(base: string, ref: string): string {
 export interface ValuesObject {
     [key: string]: Array<string> | string
 }
-interface cutResult {
-    b: string
-    a: string
-    f?: boolean
-}
 function stringsCut(s: string, sep: string): Array<string> {
     const i = s.indexOf(sep)
     if (i >= 0) {
@@ -478,13 +473,12 @@ export class Values {
      * parses the URL-encoded query string and returns a map listing the values specified for each key.
      * @param errs set errors encountered to this array
      * @param first If true then errs will only log the first error encountered
-     * @returns always returns a non-nil map containing all the valid query parameters found
+     * @returns always returns a map containing all the valid query parameters found
      */
     static parse(query: string, errs?: Array<Exception>, first = true): Values {
         const m = new Values(new Map<string, Array<string>>())
         let key: string
         let value: string
-        let cut: cutResult
         let n = errs?.length ?? 0
         while (query != "") {
             [key, query] = stringsCut(query, '&')
@@ -668,11 +662,20 @@ export class Values {
  */
 export class Userinfo {
     constructor(public readonly username: string, public readonly password?: string) { }
-    toString(): string {
+    /**
+     * 
+     * @param redacted If true replaces any password with "xxxxx".
+     * @returns 
+     */
+    toString(redacted = false): string {
         let s = escape(this.username, Encode.UserPassword)
-        const pwd = this.password
-        if (pwd) {
-            s += ":" + escape(pwd, Encode.UserPassword)
+        if (redacted) {
+            s += ':' + 'xxxxx'
+        } else {
+            const pwd = this.password
+            if (pwd) {
+                s += ':' + escape(pwd, Encode.UserPassword)
+            }
         }
         return s
     }
@@ -844,6 +847,61 @@ function validUserinfo(s: string): boolean {
     }
     return true
 }
+function validEncoded(s: string, mode: Encode): boolean {
+    for (let i = 0; i < s.length; i++) {
+        // RFC 3986, Appendix A.
+        // pchar = unreserved / pct-encoded / sub-delims / ":" / "@".
+        // shouldEscape is not quite compliant with the RFC,
+        // so we check the sub-delims ourselves and let
+        // shouldEscape handle the others.
+        const c = s.charCodeAt(i)
+        switch (c) {
+            case 33: // !
+            case 36: // $
+            case 38: // &
+            case 39: // '
+            case 40: // (
+            case 41: // )
+            case 42: // *
+            case 43: // +
+            case 44: // ,
+            case 59: // ;
+            case 61: // =
+            case 58: // :
+            case 64: // @            
+                // ok
+                break
+            case 91: // [
+            case 93: // ]
+                // ok - not specified in RFC 3986 but left alone by modern browsers
+                break
+            case 37: // %
+                // ok - percent encoded, will decode
+                break
+            default:
+                if (shouldEscape(c, mode)) {
+                    return false
+                }
+                break
+        }
+    }
+    return true
+}
+function splitHostPort(hostPort: string): Array<string> {
+    let host = hostPort
+    let port = ''
+
+    const colon = host.lastIndexOf(':')
+    if (colon != -1 && validOptionalPort(host.substring(colon))) {
+        port = host.substring(colon + 1)
+        host = host.substring(0, colon)
+    }
+
+    if (host.startsWith('[') && host.endsWith(']')) {
+        host = host.substring(1, host.length - 1)
+    }
+    return [host, port]
+}
 export class URL {
     /**
      * parses a raw url into a URL class.
@@ -867,7 +925,7 @@ export class URL {
         }
         if (frag != "") {
             try {
-                url.setFragment(frag)
+                url._setFragment(frag)
             } catch (e) {
                 throw new URLException(
                     "parse", u, e
@@ -969,7 +1027,7 @@ export class URL {
         // RawPath is a hint of the encoding of Path. We don't want to set it if
         // the default escaping of Path is equivalent, to help make sure that people
         // don't rely on it in general.
-        url.setPath(rest)
+        url._setPath(rest)
 
         return url
     }
@@ -982,16 +1040,303 @@ export class URL {
     user?: Userinfo // username and password information
     host = ''    // host or host:port
     path = ''    // path (relative paths may omit leading slash)
-    rawPath?: string    // encoded path hint (see EscapedPath method)
+    rawPath = ''    // encoded path hint (see EscapedPath method)
     forceQuery = false      // append a query ('?') even if RawQuery is empty
-    rawQuery?: string   // encoded query values, without '?'
+    rawQuery = ''   // encoded query values, without '?'
     fragment = ''    // fragment for references, without '#'
-    rawFragment?: string    // encoded fragment hint (see EscapedFragment method)
+    rawFragment = ''    // encoded fragment hint (see EscapedFragment method)
+    /**
+     * @throws {@link EscapeException}
+     */
+    private _setFragment(f: string): void {
+        const frag = unescape(f, Encode.Fragment)
+        this.fragment = frag
 
-    setFragment(f: string): void {
-
+        const e = escape(frag, Encode.Fragment)
+        if (f == e) {
+            // Default encoding is fine.
+            this.rawFragment = ''
+        } else {
+            this.rawFragment = f
+        }
     }
-    setPath(p: string): void {
+    /**
+     * @throws {@link EscapeException}
+     */
+    private _setPath(p: string): void {
+        const path = unescape(p, Encode.Path)
+        this.path = path
 
+        const e = escape(path, Encode.Path)
+        if (p == e) {
+            this.rawPath = ''
+        } else {
+            this.rawPath = p
+        }
+    }
+    /**
+     * returns the escaped form of this.fragment.
+     * 
+     * @remarks
+     * In general there are multiple possible escaped forms of any fragment.
+     * escapedFragment() returns this.rawFragment when it is a valid escaping of this.fragment.
+     * Otherwise escapedFragment() ignores this.rawFragment and computes an escaped form on its own.
+     * 
+     * The toString method uses escapedFragment() to construct its result.
+     * In general, code should call EscapedFragment instead of reading this.rawFragment directly.
+     */
+    escapedFragment(): string {
+        const raw = this.rawFragment
+        if (raw != ''
+            && validEncoded(raw, Encode.Fragment)) {
+            try {
+                if (unescape(raw, Encode.Fragment) == this.fragment) {
+                    return raw
+                }
+            } catch (_) {
+            }
+        }
+        return escape(this.fragment, Encode.Fragment)
+    }
+    /**
+     * returns the escaped form of this.path.
+     * 
+     * @remarks
+     * In general there are multiple possible escaped forms of any path.
+     * escapedPath() returns this.rawPath when it is a valid escaping of this.path.
+     * Otherwise escapedPath() ignores this.rawPath and computes an escaped form on its own.
+     * 
+     * The toString and RequestURI method uses escapedPath() to construct its result.
+     * In general, code should call escapedPath instead of reading this.rawPath directly.
+     */
+    escapedPath(): string {
+        const raw = this.rawPath
+        if (raw != ""
+            && validEncoded(raw, Encode.Path)) {
+            try {
+                if (unescape(raw, Encode.Path) == this.path) {
+                    return raw
+                }
+            } catch (_) {
+            }
+        }
+        if (this.path == "*") {
+            return "*" // don't escape (Issue 11202)
+        }
+        return escape(this.path, Encode.Path)
+    }
+    /**
+     * returns this.host, stripping any valid port number if present.
+     * @remarks
+     * If the result is enclosed in square brackets, as literal IPv6 addresses are, the square brackets are removed from the result.
+     */
+    hostname(): string {
+        const [host, _] = splitHostPort(this.host)
+        return host
+    }
+    /**
+     * returns the port part of this.host, without the leading colon.
+     * @remarks
+     * If this.host doesn't contain a valid numeric port, Port returns an undefined.
+     */
+    port(): undefined | string {
+        const [_, port] = splitHostPort(this.host)
+        return port == '' ? undefined : port
+    }
+    // return u.Scheme != ""
+    get isAbs(): boolean {
+        return this.scheme != ''
+    }
+
+
+    /**
+     * parses rawQuery and returns the corresponding values.
+     * @param errs set errors encountered to this array
+     * @param first If true then errs will only log the first error encountered
+     * @returns always returns a map containing all the valid query parameters found
+     */
+    query(errs?: Array<Exception>, first = true): Values {
+        if (this.rawQuery === '') {
+            return new Values()
+        }
+        return Values.parse(this.rawQuery, errs, first)
+    }
+
+    /**
+     * returns the encoded path?query or opaque?query string
+     */
+    requestURI(): string {
+        let result = this.opaque
+        if (result == "") {
+            result = this.escapedPath()
+            if (result == "") {
+                result = "/"
+            }
+        } else {
+            if (result.startsWith('//')) {
+                result = this.scheme + ":" + result
+            }
+        }
+        if (this.forceQuery || this.rawQuery != "") {
+            result += "?" + this.rawQuery
+        }
+        return result
+    }
+    /**
+     * reassembles the URL into a valid URL string.
+     * 
+     * @remarks
+     * The general form of the result is one of:
+     * 
+     * 1. scheme:opaque?query#fragment
+     * 2. scheme://userinfo@host/path?query#fragment
+     * 
+     * If this.opaque is non-empty, toString uses the first form; otherwise it uses the second form.
+     * Any non-ASCII characters in host are escaped.
+     * To obtain the path, toString uses this.escapedPath().
+     * 
+     * In the second form, the following rules apply:
+     * - if this.scheme is empty, scheme: is omitted.
+     * - if this.user is nil, userinfo@ is omitted.
+     * - if this.host is empty, host/ is omitted.
+     * - if this.scheme and u.Host are empty and u.User is nil, the entire scheme://userinfo@host/ is omitted.
+     * - if this.host is non-empty and u.Path begins with a /, the form host/path does not add its own /.
+     * - if this.rawQuery is empty, ?query is omitted.
+     * - if this.fragment is empty, #fragment is omitted.
+     * 
+     * @param redacted If true replaces any password with "xxxxx".
+     */
+    toString(redacted = false): string {
+        const buf = new Array<string>()
+        if (this.scheme != '') {
+            buf.push(`${this.scheme}:`)
+        }
+        if (this.opaque != '') {
+            buf.push(this.opaque)
+        } else {
+            const ui = this.user
+            const h = this.host
+            if (this.scheme != '' || h != '' || ui !== undefined) {
+                if (h != '' || this.path != '' || ui !== undefined) {
+                    buf.push('//')
+                }
+                if (ui !== undefined) {
+                    buf.push(ui.toString(redacted) + '@')
+                }
+                if (h != '') {
+                    buf.push(escape(h, Encode.Host))
+                }
+            }
+            const path = this.escapedPath()
+            if (path != '' && path[0] != '/' && h != '') {
+                buf.push('/')
+            }
+            if (buf.length == 0) {
+                // RFC 3986 §4.2
+                // A path segment that contains a colon character (e.g., "this:that")
+                // cannot be used as the first segment of a relative-path reference, as
+                // it would be mistaken for a scheme name. Such a segment must be
+                // preceded by a dot-segment (e.g., "./this:that") to make a relative-
+                // path reference.
+                const [segment] = stringsCut(path, '/')
+                if (segment.indexOf(':') >= 0) {
+                    buf.push('./')
+                }
+            }
+            buf.push(path)
+        }
+        if (this.forceQuery || this.rawQuery != '') {
+            buf.push(`?${this.rawQuery}`)
+        }
+        if (this.fragment != '') {
+            buf.push(`#${this.escapedFragment()}`)
+        }
+        return buf.join('')
+    }
+    /**
+     * resolves a URI reference to an absolute URI from an absolute base URI this, per RFC 3986 Section 5.2. 
+     * 
+     * @remarks
+     * The URI reference may be relative or absolute. resolveReference always returns a new URL instance, even if the returned URL is identical to either the base or reference.
+     * If ref is an absolute URL, then resolveReference ignores base and returns a copy of ref.
+     */
+    resolveReference(ref: URL): URL {
+        const url = ref.clone()
+        if (ref.scheme == '') {
+            url.scheme = this.scheme
+        }
+        if (ref.scheme != '' || ref.host != '' || ref.user !== undefined) {
+            // The "absoluteURI" or "net_path" cases.
+            // We can ignore the error from setPath since we know we provided a
+            // validly-escaped path.
+            url._setPath(resolvePath(ref.escapedPath(), ''))
+            return url
+        }
+        if (ref.opaque != '') {
+            url.user = undefined
+            url.host = ''
+            url.path = ''
+            return url
+        }
+        if (ref.path == '' && !ref.forceQuery && ref.rawQuery == '') {
+            url.rawQuery = this.rawQuery
+            if (ref.fragment == '') {
+                url.fragment = this.fragment
+                url.rawFragment = this.rawFragment
+            }
+        }
+        // The "abs_path" or "rel_path" cases.
+        url.host = this.host
+        url.user = this.user
+        url._setPath(resolvePath(this.escapedPath(), ref.escapedPath()))
+        return url
+    }
+    /**
+     * return this.resolveReference(URL.parse(ref))
+     */
+    parse(ref: string): URL {
+        return this.resolveReference(URL.parse(ref))
+    }
+    /**
+     * Create a full copy of the URL
+     */
+    clone(): URL {
+        const c = new URL()
+        c.scheme = this.scheme
+        c.opaque = this.opaque
+        c.user = this.user
+        c.host = this.host
+        c.path = this.path
+        c.rawPath = this.rawPath
+        c.forceQuery = this.forceQuery
+        c.rawQuery = this.rawQuery
+        c.fragment = this.fragment
+        c.rawFragment = this.rawFragment
+        return c
+    }
+
+    /**
+     * marshal to binary
+     */
+    marshalBinary(): Uint8Array {
+        return new TextEncoder().encode(this.toString())
+    }
+    /**
+     * unmarshal from binary
+     */
+    unmarshalBinary(input: BufferSource): void {
+        const text = new TextDecoder().decode(input)
+        const o = URL.parse(text)
+        this.scheme = o.scheme
+        this.opaque = o.opaque
+        this.host = o.host
+        this.user = o.user
+        this.path = o.path
+        this.rawPath = o.rawPath
+        this.forceQuery = o.forceQuery
+        this.rawQuery = o.rawQuery
+        this.fragment = o.fragment
+        this.rawFragment = o.rawFragment
+        return
     }
 }
