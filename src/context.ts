@@ -42,6 +42,11 @@ export interface Context {
      * return a Promise wait done closed
      */
     wait(): Promise<void> | undefined
+
+    /**
+     * Promise returns true after waiting for the number of milliseconds specified by ms, if done before then Promise returns false immediately
+     */
+    sleep(ms: number): Promise<boolean>
     /**
      * get() returns the value associated with this context for key or {done:true} if no value is associated with key. Successive calls to get() with  the same key returns the same result.
      */
@@ -113,6 +118,13 @@ class EmptyCtx implements Context {
     wait(): Promise<void> {
         return neverPromise
     }
+    sleep(ms: number): Promise<boolean> {
+        return new Promise((resolve) => {
+            setTimeout(() => {
+                resolve(true)
+            }, ms)
+        })
+    }
 }
 /**
  * returns a non-nil, empty Context.
@@ -180,6 +192,22 @@ class ValueCtx implements Context {
     }
     wait(): Promise<void> | undefined {
         return this.parent.wait()
+    }
+    sleep(ms: number): Promise<boolean> {
+        const wait = this.wait()
+        if (wait === undefined) {
+            return Promise.resolve(false)
+        }
+
+        return new Promise((resolve) => {
+            let t = setTimeout(() => {
+                resolve(true)
+            }, ms)
+            wait.then(() => {
+                clearTimeout(t)
+                resolve(false)
+            })
+        })
     }
 }
 /**
@@ -268,6 +296,22 @@ class CancelCtx implements CancelContext {
     }
     wait(): Promise<void> | undefined {
         return this.done.wait()
+    }
+    sleep(ms: number): Promise<boolean> {
+        const wait = this.wait()
+        if (wait === undefined) {
+            return Promise.resolve(false)
+        }
+
+        return new Promise((resolve) => {
+            let t = setTimeout(() => {
+                resolve(true)
+            }, ms)
+            wait.then(() => {
+                clearTimeout(t)
+                resolve(false)
+            })
+        })
     }
 }
 function value<T>(c: Context, key: Constructor<T>): IteratorResult<any> {

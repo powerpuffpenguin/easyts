@@ -40,6 +40,10 @@ export interface Context {
      */
     wait(): Promise<void> | undefined;
     /**
+     * Promise returns true after waiting for the number of milliseconds specified by ms, if done before then Promise returns false immediately
+     */
+    sleep(ms: number): Promise<boolean>;
+    /**
      * get() returns the value associated with this context for key or {done:true} if no value is associated with key. Successive calls to get() with  the same key returns the same result.
      */
     get<T>(key: Constructor<T>): IteratorResult<any>;

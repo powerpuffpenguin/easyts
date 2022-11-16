@@ -1,15 +1,17 @@
 {
   "name": "@king011/easyts",
-  "version": "0.0.12",
+  "version": "0.0.15",
   "description": "js library written with ts",
   "scripts": {
     "docs": "typedoc --plugin none",
     "test": "qunit lib/es5/index_test.js && qunit lib/es6/index_test.js && qunit lib/es2022/index_test.js",
     "bt": "tsc -t es2022 --outDir lib/es2022 && qunit lib/es2022/index_test.js",
     "es5": "tsc -t es5 --outDir lib/es5 --downlevelIteration",
-    "es6": "tsc -t es6 -m es6 --outDir lib/es6",
-    "es2022": "tsc -t es2022  -m es2022 --outDir lib/es2022",
-    "build": "tsc -t es5 --outDir lib/es5 --downlevelIteration && tsc -t es6 -m es6 --outDir lib/es6 && tsc -t es2022 -m es2022 --outDir lib/es2022"
+    "es6": "tsc -t es6 --outDir lib/es6",
+    "es2022": "tsc -t es2022 --outDir lib/es2022",
+    "es": "tsc -t es6 -m es6 --outDir es/es6 && tsc -t es2020 -m es2020 --outDir es/es2020",
+    "js": "tsc -t es5 --outDir lib/es5 --downlevelIteration && tsc -t es6 --outDir lib/es6 && tsc -t es2022 --outDir lib/es2022",
+    "build": "npm run es && npm run js"
   },
   "main": "lib/es6/index.js",
   "repository": {
@@ -36,5 +38,9 @@
     "golang",
     "golang-channle",
     "golang-select"
+  ],
+  "files": [
+    "lib",
+    "es"
   ]
 }
