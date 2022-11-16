@@ -1,4 +1,4 @@
-import { noResult } from "./core/values";
+import { noResult, neverPromise } from "./core/values";
 import { Chan, ReadChannel, selectChan } from "./core/channel";
 import { Exception } from "./core/exception";
 /**
@@ -31,9 +31,17 @@ export interface Context {
      */
     readonly done: ReadChannel<void>
     /**
-     * If done() is not yet closed,err() returns undefined. If done() is closed, err() returns a non-nil error explaining why
+     * If done is not yet closed,err is undefined. If done is closed, err is a non-nil error explaining why
      */
     readonly err: Exception | undefined
+    /**
+     * If done is not yet closed, isClosed is false. If done is closed, isClosed is true
+     */
+    readonly isClosed: boolean
+    /**
+     * return a Promise wait done closed
+     */
+    wait(): Promise<void> | undefined
     /**
      * get() returns the value associated with this context for key or {done:true} if no value is associated with key. Successive calls to get() with  the same key returns the same result.
      */
@@ -54,6 +62,7 @@ export interface Context {
      * returns a copy of the this context with the deadline adjusted  to be no later than d. If the this's deadline is already earlier than d, withDeadline(d) is semantically equivalent to this. The returned context's Done channel is closed when the deadline expires, when the returned cancel function is called, or when the this context's Done channel is closed, whichever happens first.
      */
     withDeadline(d: Date): CancelContext
+
 }
 
 export interface CancelContext extends Context {
@@ -97,6 +106,12 @@ class EmptyCtx implements Context {
     }
     withDeadline(d: Date): CancelContext {
         return withDeadline(this, d)
+    }
+    get isClosed(): boolean {
+        return this.err !== undefined
+    }
+    wait(): Promise<void> {
+        return neverPromise
     }
 }
 /**
@@ -159,6 +174,12 @@ class ValueCtx implements Context {
     }
     withDeadline(d: Date): CancelContext {
         return withDeadline(this, d)
+    }
+    get isClosed(): boolean {
+        return this.err !== undefined
+    }
+    wait(): Promise<void> | undefined {
+        return this.parent.wait()
     }
 }
 /**
@@ -241,6 +262,12 @@ class CancelCtx implements CancelContext {
     }
     withDeadline(d: Date): CancelContext {
         return withDeadline(this, d)
+    }
+    get isClosed(): boolean {
+        return this.err !== undefined
+    }
+    wait(): Promise<void> | undefined {
+        return this.done.wait()
     }
 }
 function value<T>(c: Context, key: Constructor<T>): IteratorResult<any> {

@@ -28,9 +28,17 @@ export interface Context {
      */
     readonly done: ReadChannel<void>;
     /**
-     * If done() is not yet closed,err() returns undefined. If done() is closed, err() returns a non-nil error explaining why
+     * If done is not yet closed,err is undefined. If done is closed, err is a non-nil error explaining why
      */
     readonly err: Exception | undefined;
+    /**
+     * If done is not yet closed, isClosed is false. If done is closed, isClosed is true
+     */
+    readonly isClosed: boolean;
+    /**
+     * return a Promise wait done closed
+     */
+    wait(): Promise<void> | undefined;
     /**
      * get() returns the value associated with this context for key or {done:true} if no value is associated with key. Successive calls to get() with  the same key returns the same result.
      */
