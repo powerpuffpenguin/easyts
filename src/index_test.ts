@@ -7,6 +7,7 @@ import './container/heap_test';
 import './container/queue_test';
 import './context_test';
 import './net/url/url_test';
-import './path_test';
+import './path/path_test';
+import './path/match_test';
 import './sync/sync_test';
 import './time_test';
