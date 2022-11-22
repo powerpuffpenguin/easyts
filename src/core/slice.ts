@@ -462,7 +462,7 @@ export class Bytes {
         if (str.length == 0) {
             return new Bytes(this.buffer, this.start, this.end)
         }
-        return this.appendArrayBuffer(new TextEncoder().encode(str))
+        return this.appendArrayBuffer(new TextEncoder().encode(str).buffer)
     }
     private _append(b: bytesLike): Bytes {
         const add = b.length()
