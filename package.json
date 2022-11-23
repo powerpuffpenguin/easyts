@@ -3,6 +3,7 @@
   "version": "0.0.15",
   "description": "js library written with ts",
   "scripts": {
+    "deno":"node deno.js",
     "docs": "typedoc --plugin none",
     "test": "qunit lib/es5/index_test.js && qunit lib/es6/index_test.js && qunit lib/es2022/index_test.js",
     "bt": "tsc -t es2022 --outDir lib/es2022 && qunit lib/es2022/index_test.js",
