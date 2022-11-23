@@ -3,7 +3,7 @@ export * from './core/channel.ts';
 export * from './core/defer.ts';
 export * from './core/exception.ts';
 export * from './core/signals.ts';
-export * from './core/signals_combiners';
+export * from './core/signals_combiners.ts';
 export * from './core/slice.ts';
 export * from './core/types.ts';
 export * from './core/values.ts';
