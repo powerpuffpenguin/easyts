@@ -20,6 +20,7 @@ The original and core content of this library is to implement golang's chan and 
     * [container](#container)
     * [sync](#sync)
     * [time](#time)
+* [Deno](deno.md)
 
 # Install
 

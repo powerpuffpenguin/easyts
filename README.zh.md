@@ -21,6 +21,7 @@ js library written with ts
     * [context](#context)
     * [sync](#sync)
     * [time](#time)
+* [Deno](deno.md)
 
 # 安裝
 
