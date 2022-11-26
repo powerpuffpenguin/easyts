@@ -3,8 +3,8 @@ async function copyFile(dst, src) {
     let text = await fs.readFile(src, {
         encoding: 'utf8'
     })
-    text = text.replace(/from[  ]+\'(\.{1,2}\/[a-zA-Z0-9\/_]+)\'/g, "from '$1.ts'")
-    text = text.replace(/from[  ]+\"(\.{1,2}\/[a-zA-Z0-9\/_]+)\"/g, "from '$1.ts'")
+    text = text.replace(/from[  ]+\'((\.{1,2}\/)+[a-zA-Z0-9\/_]+)\'/g, "from '$1.ts'")
+    text = text.replace(/from[  ]+\"((\.{1,2}\/)+[a-zA-Z0-9\/_]+)\"/g, "from '$1.ts'")
     await fs.writeFile(dst, text)
 }
 async function copyDir(dst, src) {

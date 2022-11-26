@@ -1,5 +1,5 @@
-import { Exception } from "../../core";
-import { CompareCallback } from "../../core/types";
+import { Exception } from '../../core.ts';
+import { CompareCallback } from '../../core/types.ts';
 
 export class InvalidHostException extends Exception {
     /**
