@@ -11,6 +11,9 @@ async function copyDir(dst, src) {
     await fs.mkdir(dst, 0o775)
     const files = await fs.readdir(src)
     for (const file of files) {
+        if (!file.endsWith('.ts')) {
+            continue
+        }
         if (file.endsWith('test.ts')) {
             continue
         } else if (file.endsWith('.ts')) {

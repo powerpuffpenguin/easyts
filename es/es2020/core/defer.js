@@ -126,11 +126,13 @@ export class Defer {
         const errs = new Array();
         for (let i = fs.length - 1; i >= 0; i--) {
             const f = fs[i];
-            try {
-                f.f(...f.args);
-            }
-            catch (e) {
-                errs.push(e);
+            if (f.ok) {
+                try {
+                    f.f(...f.args);
+                }
+                catch (e) {
+                    errs.push(e);
+                }
             }
         }
         if (errs.length != 0) {
@@ -166,11 +168,13 @@ export class Defer {
         const errs = new Array();
         for (let i = fs.length - 1; i >= 0; i--) {
             const f = fs[i];
-            try {
-                await f.f(...f.args);
-            }
-            catch (e) {
-                errs.push(e);
+            if (f.ok) {
+                try {
+                    await f.f(...f.args);
+                }
+                catch (e) {
+                    errs.push(e);
+                }
             }
         }
         if (errs.length != 0) {
@@ -185,35 +189,19 @@ export class Defer {
      * @param f
      */
     defer(f, ...args) {
-        this.fs_.push({
-            f: f,
-            args: args,
-        });
+        const c = new Func(f, args);
+        this.fs_.push(c);
+        return c;
     }
 }
-// function generateDefer(count: number) {
-//     for (let i = 0; i <= count; i++) {
-//         if (i == 0) {
-//             console.log('defer(f: () => any | Promise<any>): void;')
-//             continue
-//         }
-//         let str = `defer<`
-//         let strs = []
-//         for (let j = 1; j <= i; j++) {
-//             strs.push(`T${j}`)
-//         }
-//         str += `${strs.join(', ')}>(f: (`
-//         strs = []
-//         for (let j = 1; j <= i; j++) {
-//             strs.push(`v${j}: T${j}`)
-//         }
-//         str += `${strs.join(', ')}) => `
-//         strs = ['any | Promise<any>']
-//         for (let j = 1; j <= i; j++) {
-//             strs.push(`v${j}: T${j}`)
-//         }
-//         str += `${strs.join(', ')}): void;`
-//         console.log(str)
-//     }
-// }
+class Func {
+    constructor(f, args) {
+        this.f = f;
+        this.args = args;
+        this.ok = true;
+    }
+    cancel() {
+        this.ok = false;
+    }
+}
 //# sourceMappingURL=defer.js.map
