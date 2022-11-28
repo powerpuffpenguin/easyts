@@ -1,5 +1,4 @@
 generateDefer(20)
-generateDefer(20, true)
 function generateDefer(count, tag) {
     for (let i = 0; i <= count; i++) {
         if (i == 0) {
