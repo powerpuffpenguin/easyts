@@ -1,5 +1,13 @@
 import { assertInt, assertUInt } from "../assert";
-
+import { Exception } from "../core/exception";
+export class AddrError extends Exception {
+    constructor(
+        public readonly addr: string,
+        public readonly err: string,
+    ) {
+        super(addr == '' ? err : `address ${addr}: ${err}`)
+    }
+}
 export const IPv4len = 4;
 export const IPv6len = 16;
 // Bigger than we need, not too big to worry about overflow
@@ -855,4 +863,80 @@ export class IPNet {
         }
         return nn.toString() + "/" + l.toString()
     }
+}
+
+/**
+ * combines host and port into a network address of the
+ * form "host:port". If host contains a colon, as found in literal
+ * IPv6 addresses, then JoinHostPort returns "[host]:port".
+ */
+export function joinHostPort(host: string, port: string | number): string {
+    // We assume that host is a literal IPv6 address if host has
+    // colons.
+    if (host.indexOf(':') >= 0) {
+        return `[${host}]:${port}`
+    }
+    return `${host}:${port}`
+}
+
+const missingPort = "missing port in address"
+const tooManyColons = "too many colons in address"
+/**
+ * SplitHostPort splits a network address of the form "host:port",
+ * "host%zone:port", "[host]:port" or "[host%zone]:port" into host or
+ * host%zone and port.
+ * 
+ *  A literal IPv6 address in hostport must be enclosed in square
+ * brackets, as in "[::1]:80", "[::1%lo0]:80".
+ */
+export function splitHostPort(hostport: string): [string, string] {
+    let j = 0
+    let k = 0
+
+    // The port starts after the last colon.
+    let i = hostport.lastIndexOf(':')
+    if (i < 0) {
+        throw new AddrError(hostport, missingPort)
+    }
+    let host: string
+    let port: string
+    if (hostport[0] == '[') {
+        // Expect the first ']' just before the last ':'.
+        const end = hostport.indexOf(']', 1)
+        if (end < 0) {
+            throw new AddrError(hostport, "missing ']' in address")
+        }
+        switch (end + 1) {
+            case hostport.length:
+                // There can't be a ':' behind the ']' now.
+                throw new AddrError(hostport, missingPort)
+            case i:
+                // The expected result.
+                break
+            default:
+                // Either ']' isn't followed by a colon, or it is
+                // followed by a colon that is not the last one.
+                if (hostport[end + 1] == ':') {
+                    throw new AddrError(hostport, tooManyColons)
+                }
+                throw new AddrError(hostport, missingPort)
+        }
+        host = hostport.substring(1, end)
+        j = 1
+        k = end + 1 // there can't be a '[' resp. ']' before these positions
+    } else {
+        host = hostport.substring(0, i)
+        if (host.indexOf(':') >= 0) {
+            throw new AddrError(hostport, tooManyColons)
+        }
+    }
+    if (hostport.indexOf('[', j) >= 0) {
+        throw new AddrError(hostport, "unexpected '[' in address")
+    }
+    if (hostport.indexOf(']', k) >= 0) {
+        throw new AddrError(hostport, "unexpected ']' in address")
+    }
+
+    port = hostport.substring(i + 1)
+    return [host, port]
 }

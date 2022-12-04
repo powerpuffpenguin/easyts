@@ -68,7 +68,7 @@ export interface CancelContext extends Context {
     /**
      * Canceling this context releases resources associated with it, so code should call cancel as soon as the operations running in this Context complete.
      */
-    cancel(): void;
+    cancel(reason?: any): void;
 }
 /**
  * returns a non-nil, empty Context.

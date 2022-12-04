@@ -74,7 +74,7 @@ export interface CancelContext extends Context {
     /**
      * Canceling this context releases resources associated with it, so code should call cancel as soon as the operations running in this Context complete.
      */
-    cancel(): void
+    cancel(reason?: any): void
 }
 class EmptyCtx implements Context {
     static background = new EmptyCtx()
@@ -262,8 +262,8 @@ class CancelCtx implements CancelContext {
             removeChild(this.parent, this)
         }
     }
-    cancel(): void {
-        this._cancel(true, errCanceled)
+    cancel(reason?: any): void {
+        this._cancel(true, reason ?? errCanceled)
     }
     get err(): Exception | undefined {
         return this.err_
@@ -443,8 +443,8 @@ class TimerCtx extends CancelCtx implements CancelContext {
             clearTimeout(t)
         }
     }
-    cancel(): void {
-        this._cancel(true, errCanceled)
+    cancel(reason: any): void {
+        this._cancel(true, reason ?? errCanceled)
     }
     toString(): string {
         return `${this.parent}.WithDeadline(${this.deadline_} [${this.deadline_.getTime() - Date.now()}ms])`

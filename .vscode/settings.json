@@ -9,7 +9,6 @@
     "node_modules": true,
     "**/*.map": true,
     "**/*_test.d.ts": true,
-    "**/*_test.js": true
   },
   "deno.enable": false
 }

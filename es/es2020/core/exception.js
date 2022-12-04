@@ -7,7 +7,13 @@ export class Exception {
      * @param message Exception description information
      */
     constructor(message) {
-        this.message = message;
+        this.native = new Error(message);
+    }
+    get message() {
+        return this.native.message;
+    }
+    get stack() {
+        return this.native.stack;
     }
     /**
      *
@@ -16,6 +22,9 @@ export class Exception {
      */
     error() {
         return this.message;
+    }
+    toString() {
+        return this.native.toString();
     }
     /**
      * If the current exception can be converted to the target exception, return the target exception, otherwise return undefined

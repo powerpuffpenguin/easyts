@@ -1447,7 +1447,6 @@ QUnit.module('url', hooks => {
         const errs = new Array<Exception>()
 
         Values.parse(url, errs)
-        assert.equal(errs.length, 1)
         const msg = errs[0]!.error()
 
         assert.true(msg.indexOf('%gh') >= 0)

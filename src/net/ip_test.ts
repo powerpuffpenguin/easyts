@@ -1,4 +1,4 @@
-import { IP, IPMask, IPNet, IPv6len, networkNumberAndMask, parseCIDR } from "./ip"
+import { AddrError, IP, IPMask, IPNet, IPv6len, joinHostPort, networkNumberAndMask, parseCIDR, splitHostPort } from "./ip"
 const nil = undefined
 
 function makeIP(...vals: Array<number>): IP {
@@ -520,5 +520,136 @@ QUnit.module('net', hooks => {
             }
         }
     })
+    QUnit.test("JoinHostPort", (assert) => {
+        function make(host: string, port: string, hostPort: string) {
+            return {
+                host: host,
+                port: port,
+                hostPort: hostPort,
+            }
+        }
+        const tests = [
+            // Host name
+            make("localhost", "http", "localhost:http"),
+            make("localhost", "80", "localhost:80"),
 
+            // Go-specific host name with zone identifier
+            make("localhost%lo0", "http", "localhost%lo0:http"),
+            make("localhost%lo0", "80", "localhost%lo0:80"),
+
+            // IP literal
+            make("127.0.0.1", "http", "127.0.0.1:http"),
+            make("127.0.0.1", "80", "127.0.0.1:80"),
+            make("::1", "http", "[::1]:http"),
+            make("::1", "80", "[::1]:80"),
+
+            // IP literal with zone identifier
+            make("::1%lo0", "http", "[::1%lo0]:http"),
+            make("::1%lo0", "80", "[::1%lo0]:80"),
+
+            // Go-specific wildcard for host name
+            make("", "http", ":http"), // Go 1 behavior
+            make("", "80", ":80"),     // Go 1 behavior
+
+            // Go-specific wildcard for service name or transport port number
+            make("golang.org", "", "golang.org:"), // Go 1 behavior
+            make("127.0.0.1", "", "127.0.0.1:"),   // Go 1 behavior
+            make("::1", "", "[::1]:"),             // Go 1 behavior
+
+            // Opaque service name
+            make("golang.org", "https%foo", "golang.org:https%foo"), // Go 1 behavior
+        ]
+        for (const tt of tests) {
+            assert.equal(joinHostPort(tt.host, tt.port), tt.hostPort)
+        }
+    })
+    QUnit.test("SplitHostPort", (assert) => {
+        function make(hostPort: string, host: string, port: string) {
+            return {
+                host: host,
+                port: port,
+                hostPort: hostPort,
+            }
+        }
+        const tests = [
+            // Host name
+            make("localhost:http", "localhost", "http"),
+            make("localhost:80", "localhost", "80"),
+
+            // Go-specific host name with zone identifier
+            make("localhost%lo0:http", "localhost%lo0", "http"),
+            make("localhost%lo0:80", "localhost%lo0", "80"),
+            make("[localhost%lo0]:http", "localhost%lo0", "http"), // Go 1 behavior
+            make("[localhost%lo0]:80", "localhost%lo0", "80"),     // Go 1 behavior
+
+            // IP literal
+            make("127.0.0.1:http", "127.0.0.1", "http"),
+            make("127.0.0.1:80", "127.0.0.1", "80"),
+            make("[::1]:http", "::1", "http"),
+            make("[::1]:80", "::1", "80"),
+
+            // IP literal with zone identifier
+            make("[::1%lo0]:http", "::1%lo0", "http"),
+            make("[::1%lo0]:80", "::1%lo0", "80"),
+
+            // Go-specific wildcard for host name
+            make(":http", "", "http"), // Go 1 behavior
+            make(":80", "", "80"),     // Go 1 behavior
+
+            // Go-specific wildcard for service name or transport port number
+            make("golang.org:", "golang.org", ""), // Go 1 behavior
+            make("127.0.0.1:", "127.0.0.1", ""),   // Go 1 behavior
+            make("[::1]:", "::1", ""),             // Go 1 behavior
+
+            // Opaque service name
+            make("golang.org:https%foo", "golang.org", "https%foo"), // Go 1 behavior
+        ]
+        for (const tt of tests) {
+            const [host, port] = splitHostPort(tt.hostPort)
+            assert.equal(host, tt.host)
+            assert.equal(port, tt.port)
+        }
+        function err(hostPort: string, err: string) {
+            return {
+                err: err,
+                hostPort: hostPort,
+            }
+        }
+        const errs = [
+            err("golang.org", "missing port in address"),
+            err("127.0.0.1", "missing port in address"),
+            err("[::1]", "missing port in address"),
+            err("[fe80::1%lo0]", "missing port in address"),
+            err("[localhost%lo0]", "missing port in address"),
+            err("localhost%lo0", "missing port in address"),
+
+            err("::1", "too many colons in address"),
+            err("fe80::1%lo0", "too many colons in address"),
+            err("fe80::1%lo0:80", "too many colons in address"),
+
+            // Test cases that didn't fail in Go 1
+
+            err("[foo:bar]", "missing port in address"),
+            err("[foo:bar]baz", "missing port in address"),
+            err("[foo]bar:baz", "missing port in address"),
+
+            err("[foo]:[bar]:baz", "too many colons in address"),
+
+            err("[foo]:[bar]baz", "unexpected '[' in address"),
+            err("foo[bar]:baz", "unexpected '[' in address"),
+
+            err("foo]bar:baz", "unexpected ']' in address"),
+        ]
+        for (const tt of errs) {
+            try {
+                splitHostPort(tt.hostPort)
+                assert.true(false, tt.hostPort)
+            } catch (e) {
+                assert.true(e instanceof AddrError)
+                if (e instanceof AddrError) {
+                    assert.equal(e.err, tt.err)
+                }
+            }
+        }
+    })
 })

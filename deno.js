@@ -37,5 +37,9 @@ async function main() {
     await fs.writeFile(dst + '/.vscode/settings.json', JSON.stringify({
         "deno.enable": true
     }, undefined, '   '))
+
+    await copyFile(`${dst}/README.md`, `${__dirname}/README.md`)
+    await copyFile(`${dst}/README.zh.md`, `${__dirname}/README.zh.md`)
+    await copyFile(`${dst}/LICENSE`, `${__dirname}/LICENSE`)
 }
 main()

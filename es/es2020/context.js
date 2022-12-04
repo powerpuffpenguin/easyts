@@ -197,8 +197,8 @@ class CancelCtx {
             removeChild(this.parent, this);
         }
     }
-    cancel() {
-        this._cancel(true, errCanceled);
+    cancel(reason) {
+        this._cancel(true, reason ?? errCanceled);
     }
     get err() {
         return this.err_;
@@ -381,8 +381,8 @@ class TimerCtx extends CancelCtx {
             clearTimeout(t);
         }
     }
-    cancel() {
-        this._cancel(true, errCanceled);
+    cancel(reason) {
+        this._cancel(true, reason ?? errCanceled);
     }
     toString() {
         return `${this.parent}.WithDeadline(${this.deadline_} [${this.deadline_.getTime() - Date.now()}ms])`;
