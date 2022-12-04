@@ -52,6 +52,25 @@ QUnit.module('context', hooks => {
         assert.true(c3.done.isClosed)
         assert.strictEqual(c0.err, errCanceled)
         assert.strictEqual(c3.err, errCanceled)
+
+    })
+    QUnit.test('cancel reason', (assert) => {
+        {
+            const c0 = background().withCancel()
+            const c1 = c0.withTimeout(1)
+            c1.cancel(456)
+            c0.cancel(123)
+            assert.equal(c0.err, 123)
+            assert.equal(c1.err, 456)
+        }
+        {
+            const c0 = background().withCancel()
+            const c1 = c0.withTimeout(1)
+            c0.cancel(123)
+            c1.cancel(456)
+            assert.equal(c0.err, 123)
+            assert.equal(c1.err, 123)
+        }
     })
     QUnit.test('timeout', async (assert) => {
         const s = assert.async(1)
@@ -68,7 +87,7 @@ QUnit.module('context', hooks => {
             const c3 = c0.withTimeout(1)
             assert.strictEqual(c3.err, undefined)
             assert.false(c3.done.isClosed)
-            await sleep(2)
+            await sleep(5)
             assert.strictEqual(c3.err, errDeadlineExceeded)
             assert.true(c3.done.isClosed)
 
