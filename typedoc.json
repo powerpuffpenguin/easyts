@@ -1,8 +1,10 @@
 {
     "entryPointStrategy": "expand",
     "entryPoints": [
+        "src/assert.ts",
         "src/container.ts",
         "src/core.ts",
+        "src/net.ts",
         "src/net/url.ts",
         "src/sync.ts",
         "src/path.ts",
