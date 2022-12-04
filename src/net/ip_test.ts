@@ -1,8 +1,11 @@
-import { IP, IPMask, IPNet, parseCIDR } from "./ip"
+import { IP, IPMask, IPNet, IPv6len, networkNumberAndMask, parseCIDR } from "./ip"
 const nil = undefined
 
 function makeIP(...vals: Array<number>): IP {
     return new IP(new Uint8Array(vals))
+}
+function makeIPMask(...vals: Array<number>): IPMask {
+    return new IPMask(new Uint8Array(vals))
 }
 function ParseError(v: {
     Type: string
@@ -325,6 +328,196 @@ QUnit.module('net', hooks => {
         ]
         for (const tt of tests) {
             assert.equal(tt.in.toString(), tt.out)
+        }
+    })
+    QUnit.test("CIDRMask", (assert) => {
+        function make(ones: number, bits: number, out?: IPMask) {
+            return {
+                ones: ones,
+                bits: bits,
+                out: out,
+            }
+        }
+        const tests = [
+            make(0, 32, IPMask.v4(0, 0, 0, 0)),
+            make(12, 32, IPMask.v4(255, 240, 0, 0)),
+            make(24, 32, IPMask.v4(255, 255, 255, 0)),
+            make(32, 32, IPMask.v4(255, 255, 255, 255)),
+            make(0, 128, makeIPMask(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)),
+            make(4, 128, makeIPMask(0xf0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)),
+            make(48, 128, makeIPMask(0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)),
+            make(128, 128, makeIPMask(0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff)),
+            make(33, 32, nil),
+            make(32, 33, nil),
+            make(-1, 128, nil),
+            make(128, -1, nil),
+        ]
+        for (const tt of tests) {
+
+            assert.deepEqual(IPMask.cidr(tt.ones, tt.bits), tt.out)
+        }
+    })
+    const v4addr = makeIP(192, 168, 0, 1)
+    const v4mappedv6addr = makeIP(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xff, 0xff, 192, 168, 0, 1)
+    const v6addr = makeIP(0x20, 0x1, 0xd, 0xb8, 0, 0, 0, 0, 0, 0, 0x1, 0x23, 0, 0x12, 0, 0x1)
+    const v4mask = makeIPMask(255, 255, 255, 0)
+    const v4mappedv6mask = makeIPMask(0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 255, 255, 255, 0)
+    const v6mask = makeIPMask(0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0, 0, 0, 0, 0, 0, 0, 0)
+    const badaddr = makeIP(192, 168, 0)
+    const badmask = makeIPMask(255, 255, 0)
+    const v4maskzero = makeIPMask(0, 0, 0, 0)
+    QUnit.test("NetworkNumberAndMask", (assert) => {
+        function make(in0: IPNet, out?: IPNet) {
+            return {
+                in: in0,
+                out: out,
+            }
+        }
+        const tests = [
+            make(new IPNet(v4addr, v4mask), new IPNet(v4addr, v4mask)),
+            make(new IPNet(v4addr, v4mappedv6mask), new IPNet(v4addr, v4mask)),
+            make(new IPNet(v4mappedv6addr, v4mappedv6mask), new IPNet(v4addr, v4mask)),
+            make(new IPNet(v4mappedv6addr, v6mask), new IPNet(v4addr, v4maskzero)),
+            make(new IPNet(v4addr, v6mask), new IPNet(v4addr, v4maskzero)),
+            make(new IPNet(v6addr, v6mask), new IPNet(v6addr, v6mask)),
+            make(new IPNet(v6addr, v4mappedv6mask), new IPNet(v6addr, v4mappedv6mask)),
+            make(new IPNet(v6addr, v4mask)),
+            make(new IPNet(v4addr, badmask)),
+            make(new IPNet(v4mappedv6addr, badmask)),
+            make(new IPNet(v6addr, badmask)),
+            make(new IPNet(badaddr, v4mask)),
+            make(new IPNet(badaddr, v4mappedv6mask)),
+            make(new IPNet(badaddr, v6mask)),
+            make(new IPNet(badaddr, badmask)),
+        ]
+        for (const tt of tests) {
+            const out = networkNumberAndMask(tt.in)
+            if (out) {
+                const [ip, mask] = out
+                assert.deepEqual(ip, tt.out!.ip)
+                assert.deepEqual(mask, tt.out!.mask)
+            } else {
+                assert.equal(out, tt.out)
+            }
+
+        }
+    })
+    QUnit.test("IPAddrFamily", (assert) => {
+        function make(ip: IP, af4: boolean, af6: boolean) {
+            return {
+                in: ip,
+                af4: af4,
+                af6: af6,
+            }
+        }
+        const tests = [
+            make(IP.v4bcast, true, false),
+            make(IP.v4allsys, true, false),
+            make(IP.v4allrouter, true, false),
+            make(IP.v4zero, true, false),
+            make(IP.v4(224, 0, 0, 1), true, false),
+            make(IP.v4(127, 0, 0, 1), true, false),
+            make(IP.v4(240, 0, 0, 1), true, false),
+            make(IP.v6unspecified, false, true),
+            make(IP.v6loopback, false, true),
+            make(IP.v6interfacelocalallnodes, false, true),
+            make(IP.v6linklocalallnodes, false, true),
+            make(IP.v6linklocalallrouters, false, true),
+            make(IP.parse("ff05::a:b:c:d")!, false, true),
+            make(IP.parse("fe80::1:2:3:4")!, false, true),
+            make(IP.parse("2001:db8::123:12:1")!, false, true),
+        ]
+        for (const tt of tests) {
+            let af = tt.in.to4() !== undefined
+            assert.equal(af, tt.af4)
+
+            af = tt.in.length == IPv6len && tt.in.to4() === undefined
+            assert.equal(af, tt.af6, `${tt.in}`)
+        }
+    })
+    QUnit.test("IPAddrScope", (assert) => {
+        const nilIP = new IP(new Uint8Array())
+        function make(scope: (ip: IP) => boolean, ip: undefined | IP, ok: boolean) {
+            return {
+                scope: scope,
+                in: ip ?? nilIP,
+                ok: ok,
+            }
+        }
+
+        const tests = [
+            make((ip) => ip.isUnspecified, IP.v4zero, true),
+            make((ip) => ip.isUnspecified, IP.v4(127, 0, 0, 1), false),
+            make((ip) => ip.isUnspecified, IP.v6unspecified, true),
+            make((ip) => ip.isUnspecified, IP.v6interfacelocalallnodes, false),
+            make((ip) => ip.isUnspecified, nil, false),
+            make((ip) => ip.isLoopback, IP.v4(127, 0, 0, 1), true),
+            make((ip) => ip.isLoopback, IP.v4(127, 255, 255, 254), true),
+            make((ip) => ip.isLoopback, IP.v4(128, 1, 2, 3), false),
+            make((ip) => ip.isLoopback, IP.v6loopback, true),
+            make((ip) => ip.isLoopback, IP.v6linklocalallrouters, false),
+            make((ip) => ip.isLoopback, nil, false),
+            make((ip) => ip.isMulticast, IP.v4(224, 0, 0, 0), true),
+            make((ip) => ip.isMulticast, IP.v4(239, 0, 0, 0), true),
+            make((ip) => ip.isMulticast, IP.v4(240, 0, 0, 0), false),
+            make((ip) => ip.isMulticast, IP.v6linklocalallnodes, true),
+            make((ip) => ip.isMulticast, makeIP(0xff, 0x05, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0), true),
+            make((ip) => ip.isMulticast, makeIP(0xfe, 0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0), false),
+            make((ip) => ip.isMulticast, nil, false),
+            make((ip) => ip.isInterfaceLocalMulticast, IP.v4(224, 0, 0, 0), false),
+            make((ip) => ip.isInterfaceLocalMulticast, IP.v4(0xff, 0x01, 0, 0), false),
+            make((ip) => ip.isInterfaceLocalMulticast, IP.v6interfacelocalallnodes, true),
+            make((ip) => ip.isInterfaceLocalMulticast, nil, false),
+            make((ip) => ip.isLinkLocalMulticast, IP.v4(224, 0, 0, 0), true),
+            make((ip) => ip.isLinkLocalMulticast, IP.v4(239, 0, 0, 0), false),
+            make((ip) => ip.isLinkLocalMulticast, IP.v4(0xff, 0x02, 0, 0), false),
+            make((ip) => ip.isLinkLocalMulticast, IP.v6linklocalallrouters, true),
+            make((ip) => ip.isLinkLocalMulticast, makeIP(0xff, 0x05, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0), false),
+            make((ip) => ip.isLinkLocalMulticast, nil, false),
+            make((ip) => ip.isLinkLocalUnicast, IP.v4(169, 254, 0, 0), true),
+            make((ip) => ip.isLinkLocalUnicast, IP.v4(169, 255, 0, 0), false),
+            make((ip) => ip.isLinkLocalUnicast, IP.v4(0xfe, 0x80, 0, 0), false),
+            make((ip) => ip.isLinkLocalUnicast, makeIP(0xfe, 0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0), true),
+            make((ip) => ip.isLinkLocalUnicast, makeIP(0xfe, 0xc0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0), false),
+            make((ip) => ip.isLinkLocalUnicast, nil, false),
+            make((ip) => ip.isGlobalUnicast, IP.v4(240, 0, 0, 0), true),
+            make((ip) => ip.isGlobalUnicast, IP.v4(232, 0, 0, 0), false),
+            make((ip) => ip.isGlobalUnicast, IP.v4(169, 254, 0, 0), false),
+            make((ip) => ip.isGlobalUnicast, IP.v4bcast, false),
+            make((ip) => ip.isGlobalUnicast, makeIP(0x20, 0x1, 0xd, 0xb8, 0, 0, 0, 0, 0, 0, 0x1, 0x23, 0, 0x12, 0, 0x1), true),
+            make((ip) => ip.isGlobalUnicast, makeIP(0xfe, 0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0), false),
+            make((ip) => ip.isGlobalUnicast, makeIP(0xff, 0x05, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0), false),
+            make((ip) => ip.isGlobalUnicast, nil, false),
+            make((ip) => ip.isPrivate, nil, false),
+            make((ip) => ip.isPrivate, IP.v4(1, 1, 1, 1), false),
+            make((ip) => ip.isPrivate, IP.v4(9, 255, 255, 255), false),
+            make((ip) => ip.isPrivate, IP.v4(10, 0, 0, 0), true),
+            make((ip) => ip.isPrivate, IP.v4(10, 255, 255, 255), true),
+            make((ip) => ip.isPrivate, IP.v4(11, 0, 0, 0), false),
+            make((ip) => ip.isPrivate, IP.v4(172, 15, 255, 255), false),
+            make((ip) => ip.isPrivate, IP.v4(172, 16, 0, 0), true),
+            make((ip) => ip.isPrivate, IP.v4(172, 16, 255, 255), true),
+            make((ip) => ip.isPrivate, IP.v4(172, 23, 18, 255), true),
+            make((ip) => ip.isPrivate, IP.v4(172, 31, 255, 255), true),
+            make((ip) => ip.isPrivate, IP.v4(172, 31, 0, 0), true),
+            make((ip) => ip.isPrivate, IP.v4(172, 32, 0, 0), false),
+            make((ip) => ip.isPrivate, IP.v4(192, 167, 255, 255), false),
+            make((ip) => ip.isPrivate, IP.v4(192, 168, 0, 0), true),
+            make((ip) => ip.isPrivate, IP.v4(192, 168, 255, 255), true),
+            make((ip) => ip.isPrivate, IP.v4(192, 169, 0, 0), false),
+            make((ip) => ip.isPrivate, makeIP(0xfb, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff), false),
+            make((ip) => ip.isPrivate, makeIP(0xfc, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0), true),
+            make((ip) => ip.isPrivate, makeIP(0xfc, 0xff, 0x12, 0, 0, 0, 0, 0x44, 0, 0, 0, 0, 0, 0, 0, 0), true),
+            make((ip) => ip.isPrivate, makeIP(0xfd, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff), true),
+            make((ip) => ip.isPrivate, makeIP(0xfe, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0), false),
+        ]
+        for (const tt of tests) {
+            assert.equal(tt.scope(tt.in), tt.ok, `${tt.in}`)
+
+            const ip = tt.in.to4()
+            if (ip) {
+                assert.equal(tt.scope(ip), tt.ok)
+            }
         }
     })
 

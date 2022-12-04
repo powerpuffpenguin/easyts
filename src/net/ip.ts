@@ -597,7 +597,7 @@ export class IP {
         ) {
             for (let i = 0; i < 10; i++) {
                 if (ip[i] != 0) {
-                    break;
+                    return;
                 }
             }
             return new IP(ip.subarray(12, 16));
@@ -772,7 +772,10 @@ export function parseCIDR(s: string): [IP, IPNet] | undefined {
     const m = IPMask.cidr(n, 8 * iplen)!
     return [ip, new IPNet(ip.mask(m)!, m)]
 }
-function networkNumberAndMask(n: IPNet): [IP, IPMask] | undefined {
+/**
+ * @internal
+ */
+export function networkNumberAndMask(n: IPNet): [IP, IPMask] | undefined {
     let ip = n.ip.to4()
     if (ip === undefined) {
         ip = n.ip
