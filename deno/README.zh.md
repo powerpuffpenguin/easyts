@@ -43,8 +43,8 @@ npm install @king011/easyts
 如果你使用 deno, 你可以創建一個 deps.ts 檔案
 
 ```
-export * from "https://deno.land/x/flags@0.0.20/core.ts";
-export * from "https://deno.land/x/flags@0.0.20/context.ts";
+export * from "https://deno.land/x/easyts@0.0.20/core.ts";
+export * from "https://deno.land/x/easyts@0.0.20/context.ts";
 // export from other.ts
 ```
 

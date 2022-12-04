@@ -48,8 +48,8 @@ directory. You can choose the version to import according to your environment.
 If you use deno, you can create a deps.ts
 
 ```
-export * from "https://deno.land/x/flags@0.0.20/core.ts";
-export * from "https://deno.land/x/flags@0.0.20/context.ts";
+export * from "https://deno.land/x/easyts@0.0.20/core.ts";
+export * from "https://deno.land/x/easyts@0.0.20/context.ts";
 // export from other.ts
 ```
 
