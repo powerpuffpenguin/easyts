@@ -11,6 +11,8 @@ export declare const errChanneWriteCase: Exception;
  * Thrown when case is not readable or not ready
  */
 export declare const errChanneReadCase: Exception;
+export declare type ReadReturn<T> = undefined | T | Promise<undefined | T>;
+export declare type ReadRawReturn<T> = [undefined, false] | [T, true] | Promise<[undefined, false] | [T, true]>;
 /**
  * a read-only channel
  */
@@ -18,7 +20,11 @@ export interface ReadChannel<T> {
     /**
      * Read a value from the channel, block if there is no value to read, and return until there is a value or the channel is closed
      */
-    read(): IteratorResult<T> | Promise<IteratorResult<T>>;
+    read(): ReadReturn<T>;
+    /**
+     * Read a value from the channel, block if there is no value to read, and return until there is a value or the channel is closed
+     */
+    readRaw(): ReadRawReturn<T>;
     /**
      * Attempts to read a value from the channel, returns undefined if no value is readable, returns \{done:true\} if the channel is closed
      */
@@ -125,7 +131,7 @@ export interface Channel<T> extends ReadChannel<T>, WriteChannel<T> {
  *
  *     const [x, y] = [await c.read(), await c.read()] // receive from c
  *
- *     console.log(x.value, y.value, x.value + y.value)
+ *     console.log(x, y, x + y)
  * }
  * main()
  * ```
@@ -135,10 +141,10 @@ export interface Channel<T> extends ReadChannel<T>, WriteChannel<T> {
  *     const ch = new Chan<number>(2)
  *     ch.write(1)
  *     ch.write(2)
- *     let v = ch.read() as IteratorResult<number>
- *     console.log(v.value)
- *     v = ch.read() as IteratorResult<number>
- *     console.log(v.value)
+ *     let [v,ok]= ch.readRaw()
+ *     console.log(v,ok)
+ *     v = ch.read()
+ *     console.log(v)
  * ```
  */
 export declare class Chan<T> implements ReadChannel<T>, WriteChannel<T> {
@@ -160,7 +166,11 @@ export declare class Chan<T> implements ReadChannel<T>, WriteChannel<T> {
     /**
      * Read a value from the channel, block if there is no value to read, and return until there is a value or the channel is closed
      */
-    read(): IteratorResult<T> | Promise<IteratorResult<T>>;
+    read(): ReadReturn<T>;
+    /**
+     * Read a value from the channel, block if there is no value to read, and return until there is a value or the channel is closed
+     */
+    readRaw(): ReadRawReturn<T>;
     /**
      * Attempts to read a value from the channel, returns undefined if no value is readable, returns \{done:true\} if the channel is closed
      */
@@ -227,9 +237,13 @@ export declare class Chan<T> implements ReadChannel<T>, WriteChannel<T> {
 export declare type CaseLike = ReadCaseLike | WriteCaseLike;
 export interface ReadCaseLike {
     /**
-     * Returns the value read by the case, throws an exception if the case is not ready or this is not a read case
+     * Returns the value read by the case, throws an exception if the case is not ready
      */
-    read(): IteratorResult<any>;
+    read(): undefined | any;
+    /**
+     * Returns the value read by the case, throws an exception if the case is not ready
+     */
+    readRaw(): [undefined, false] | [any, true];
     /**
      * Returns whether this case is ready
      */
@@ -256,7 +270,11 @@ export declare class ReadCase<T> implements ReadCaseLike {
     /**
      * Returns the value read by the case, throws an exception if the case is not ready
      */
-    read(): IteratorResult<T>;
+    read(): undefined | T;
+    /**
+     * Returns the value read by the case, throws an exception if the case is not ready
+     */
+    readRaw(): [undefined, false] | [T, true];
     /**
      * Returns whether this case is ready
      */

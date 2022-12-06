@@ -1,4 +1,4 @@
-import { Chan, selectChan } from "./channel"
+import { Chan, ReadReturn, selectChan } from "./channel"
 
 QUnit.module('chan', hooks => {
     QUnit.test('no buffer', async (assert) => {
@@ -51,40 +51,41 @@ QUnit.module('chan', hooks => {
             assert.true(ch.write(10))
 
             let flag = 0;
-            let p: Promise<IteratorResult<number>> | undefined
+            let p: ReadReturn<number>
             (() => {
                 assert.equal(flag, 0)
                 flag = 1
-                let a: IteratorResult<number> = ch.read() as any
-                assert.equal(a.value, 1)
-                a = ch.read() as any
-                assert.equal(a.value, 2)
-                a = ch.read() as any
-                assert.equal(a.value, 10)
+                let a = ch.read()
+                assert.equal(a, 1)
+                a = ch.read()
+                assert.equal(a, 2)
+                a = ch.read()
+                assert.equal(a, 10)
 
-                p = ch.read() as any
+                p = ch.read()
             })()
             await ch.write(3)
             assert.equal(flag, 1)
             flag = 2
             const val = await p
-            assert.equal(val?.value, 3)
+            assert.equal(val, 3)
 
             assert.true(ch.write(100))
             assert.true(ch.write(200))
-            let a: IteratorResult<number> = ch.read() as any
-            assert.equal(a.value, 100)
+            let a = ch.read()
+            assert.equal(a, 100)
             assert.true(ch.write(300))
-            a = ch.read() as any
-            assert.equal(a.value, 200)
+            a = ch.read()
+            assert.equal(a, 200)
 
             assert.true(ch.close())
             assert.false(ch.write(1))
 
-            a = ch.read() as any
-            assert.equal(a.value, 300)
-            a = ch.read() as any
-            assert.true(a.done)
+            a = ch.read()
+            assert.equal(a, 300)
+            const [no, ok] = ch.readRaw() as any
+            assert.false(ok)
+            assert.equal(no, undefined)
         } finally {
             signals()
         }
@@ -102,7 +103,7 @@ QUnit.module('chan', hooks => {
                 assert.true(ch0.write(12))
             }, 0)
             assert.strictEqual(await selectChan(r0, w1), r0)
-            assert.strictEqual(r0.read().value, 12)
+            assert.strictEqual(r0.read(), 12)
 
             setTimeout(() => {
                 ch1.close()
@@ -120,7 +121,7 @@ QUnit.module('chan', hooks => {
             let r0 = ch0.readCase()
             let w0 = ch0.writeCase(1)
             setTimeout(() => {
-                assert.equal((ch0.read() as IteratorResult<any>).value, 1)
+                assert.equal(ch0.read(), 1)
             }, 0)
             assert.equal(w0, await selectChan(r0, w0))
             assert.true(w0.write())
@@ -129,7 +130,7 @@ QUnit.module('chan', hooks => {
                 assert.true(ch0.write(100))
             }, 0)
             assert.equal(r0, await selectChan(r0, w0))
-            assert.equal(r0.read().value, 100)
+            assert.equal(r0.read(), 100)
 
             assert.false(ch0.isClosed)
             assert.true(ch0.close())
@@ -140,7 +141,9 @@ QUnit.module('chan', hooks => {
                 const s = selectChan(r0, w0)
                 if (s == r0) {
                     flag |= 0x1
-                    assert.true(s.read().done)
+                    const [_, ok] = s.readRaw()
+                    assert.false(ok)
+                    assert.equal(r0.read(), undefined)
                 } else if (s == w0) {
                     flag |= 0x2
                     assert.false(s.write())

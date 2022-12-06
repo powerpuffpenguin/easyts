@@ -10,11 +10,11 @@ const errChannelReaderEmpty = new Exception('Reader empty');
 /**
  * Thrown when case is not writable or not ready
  */
-export const errChanneWriteCase = new Exception('case not ready or unwritable');
+export const errChanneWriteCase = new Exception('write case not ready');
 /**
  * Thrown when case is not readable or not ready
  */
-export const errChanneReadCase = new Exception('case not ready or unreadable');
+export const errChanneReadCase = new Exception('read case not ready');
 /**
  * The concrete realization of Channel
  * @sealed
@@ -36,7 +36,7 @@ export const errChanneReadCase = new Exception('case not ready or unreadable');
  *
  *     const [x, y] = [await c.read(), await c.read()] // receive from c
  *
- *     console.log(x.value, y.value, x.value + y.value)
+ *     console.log(x, y, x + y)
  * }
  * main()
  * ```
@@ -46,10 +46,10 @@ export const errChanneReadCase = new Exception('case not ready or unreadable');
  *     const ch = new Chan<number>(2)
  *     ch.write(1)
  *     ch.write(2)
- *     let v = ch.read() as IteratorResult<number>
- *     console.log(v.value)
- *     v = ch.read() as IteratorResult<number>
- *     console.log(v.value)
+ *     let [v,ok]= ch.readRaw()
+ *     console.log(v,ok)
+ *     v = ch.read()
+ *     console.log(v)
  * ```
  */
 export class Chan {
@@ -90,14 +90,40 @@ export class Chan {
         const val = rw.tryRead();
         if (val === undefined) {
             // chan 已經關閉
-            return noResult;
+            return undefined;
         }
         else if (!val.done) {
             // 返回讀取到的值
-            return val;
+            return val.value;
         }
         return new Promise((resolve) => {
-            rw.read(resolve);
+            rw.read((val) => {
+                resolve(val.done ? undefined : val.value);
+            });
+        });
+    }
+    //     /**
+    //  * Read a value from the channel, block if there is no value to read, and return until there is a value or the channel is closed
+    //  */
+    //      read(): undefined | T | Promise<T>
+    /**
+     * Read a value from the channel, block if there is no value to read, and return until there is a value or the channel is closed
+     */
+    readRaw() {
+        const rw = this.rw_;
+        const val = rw.tryRead();
+        if (val === undefined) {
+            // chan 已經關閉
+            return [undefined, false];
+        }
+        else if (!val.done) {
+            // 返回讀取到的值
+            return [val.value, true];
+        }
+        return new Promise((resolve) => {
+            rw.read((val) => {
+                resolve(val.done ? [undefined, false] : [val.value, true]);
+            });
         });
     }
     /**
@@ -222,11 +248,11 @@ export class Chan {
      */
     async *[Symbol.asyncIterator]() {
         while (true) {
-            const val = await this.read();
-            if (val.done) {
+            const [val, ok] = await this.readRaw();
+            if (!ok) {
                 break;
             }
-            yield val.value;
+            yield val;
         }
     }
 }
@@ -544,7 +570,17 @@ export class ReadCase {
         if (val === undefined) {
             throw errChanneReadCase;
         }
-        return val;
+        return val.done ? undefined : val.value;
+    }
+    /**
+     * Returns the value read by the case, throws an exception if the case is not ready
+     */
+    readRaw() {
+        const val = this.read_;
+        if (val === undefined) {
+            throw errChanneReadCase;
+        }
+        return val.done ? [undefined, false] : [val.value, true];
     }
     /**
      * reset read-write status
