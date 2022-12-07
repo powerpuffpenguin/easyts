@@ -1,19 +1,13 @@
 /**
  * Base class for exceptions thrown by this library
  */
-export class Exception {
+export class Exception extends Error {
     /**
      *
      * @param message Exception description information
      */
     constructor(message) {
-        this.native = new Error(message);
-    }
-    get message() {
-        return this.native.message;
-    }
-    get stack() {
-        return this.native.stack;
+        super(message);
     }
     /**
      *
@@ -22,9 +16,6 @@ export class Exception {
      */
     error() {
         return this.message;
-    }
-    toString() {
-        return this.native.toString();
     }
     /**
      * If the current exception can be converted to the target exception, return the target exception, otherwise return undefined

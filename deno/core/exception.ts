@@ -1,20 +1,13 @@
 /**
  * Base class for exceptions thrown by this library
  */
-export class Exception {
-    public readonly native: Error
+export class Exception extends Error {
     /**
      * 
      * @param message Exception description information
      */
     constructor(message: string) {
-        this.native = new Error(message)
-    }
-    get message() {
-        return this.native.message
-    }
-    get stack() {
-        return this.native.stack
+        super(message)
     }
     /**
      * 
@@ -23,9 +16,6 @@ export class Exception {
      */
     error(): string {
         return this.message
-    }
-    toString(): string {
-        return this.native.toString()
     }
     /**
      * If the current exception can be converted to the target exception, return the target exception, otherwise return undefined
