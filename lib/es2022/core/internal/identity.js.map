@@ -1,0 +1,1 @@
+{"version":3,"file":"identity.js","sourceRoot":"","sources":["../../../../src/core/internal/identity.ts"],"names":[],"mappings":";;;AAGA,MAAa,QAAQ;IACI;IAA2B;IAAhD,YAAqB,EAAgB,EAAW,OAAe;QAA1C,OAAE,GAAF,EAAE,CAAc;QAAW,YAAO,GAAP,OAAO,CAAQ;IAAI,CAAC;CACvE;AAFD,4BAEC;AAEY,QAAA,iBAAiB,GAAG,EAAE,EAAE,EAAE,CAAC,EAAE,IAAI,EAAE,WAAW,EAAE,CAAA"}
