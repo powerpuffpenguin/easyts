@@ -10,7 +10,7 @@ var __asyncGenerator = (this && this.__asyncGenerator) || function (thisArg, _ar
     function reject(value) { resume("throw", value); }
     function settle(f, v) { if (f(v), q.shift(), q.length) resume(q[0][0], q[0][1]); }
 };
-import { Completer } from "./completer";
+import { Completer } from "./async";
 import { CodeException } from "./exception";
 import { neverPromise, noResult } from "./values";
 export var ErrorCode;

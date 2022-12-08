@@ -19,6 +19,10 @@ export class Exception extends Error {
         this.name = new.target.name
     }
     /**
+     * error code
+     */
+    ec?: number
+    /**
      * If true, the error is caused by exceeding the time limit
      */
     timeout?: boolean
@@ -26,6 +30,11 @@ export class Exception extends Error {
      * If true, this is a temporary error and the operation can be retried later
      */
     temporary?: boolean
+
+    /**
+     * Is it triggered by context default cancellation
+     */
+    canceled?: boolean
 }
 
 /**

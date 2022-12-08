@@ -1,6 +1,6 @@
 export * from './assert.ts'
+export * from './async.ts'
 export * from './channel.ts'
-export * from './completer.ts'
 export * from './defer.ts'
 export * from './exception.ts'
 export * from './number.ts'

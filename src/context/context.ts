@@ -1,4 +1,4 @@
-import { noResult, neverPromise } from "../values";
+import { neverPromise, noResult } from "../values";
 import { Chan, ReadChannel, selectChan } from "../channel";
 import { Exception } from "../exception";
 import { Constructor } from "../types";
@@ -17,12 +17,11 @@ export class DeadlineExceeded extends Exception {
         this.temporary = true
     }
 }
-// export type Constructor<T> = new (...args: any[]) => T
 
-// /**
-//  * errDeadlineExceeded is the error returned by context.err() when the context's deadline passes.
-//  */
-// export const errDeadlineExceeded = new DeadlineExceeded()
+/**
+ * errDeadlineExceeded is the error returned by context.err() when the context's deadline passes.
+ */
+export const errDeadlineExceeded = new DeadlineExceeded()
 /**
  * A Context carries a deadline, a cancellation signal, and other values across API boundaries.
  */
@@ -56,14 +55,10 @@ export interface Context {
     /**
      * get() returns the value associated with this context for key or {done:true} if no value is associated with key. Successive calls to get() with  the same key returns the same result.
      */
-    get<T>(key: Constructor<T>): any | undefined
+    get<T>(key: Constructor<T>): IteratorResult<any>
     /**
-     * get() returns the value associated with this context for key or {done:true} if no value is associated with key. Successive calls to get() with  the same key returns the same result.
+     * returns a copy of parent in which the value associated with key is val.
      */
-    getRaw<T>(key: Constructor<T>): [undefined, false] | [any, true]
-    /**
-    * returns a copy of parent in which the value associated with key is val.
-    */
     withValue<T>(key: Constructor<T>, val: any): Context
     /**
      * returns a copy of this with a new Done channel. The returned context's Done channel is closed when the returned copy cancel function is called or when the parent context's Done channel is closed, whichever happens first.
@@ -99,11 +94,8 @@ class EmptyCtx implements Context {
     get err(): Exception | undefined {
         return undefined
     }
-    get<T>(key: Constructor<T>): any | undefined {
-        return
-    }
-    getRaw<T>(key: Constructor<T>): [undefined, false] | [any, true] {
-        return [undefined, false]
+    get<T>(key: Constructor<T>): IteratorResult<any> {
+        return noResult
     }
     toString(): string {
         if (this == EmptyCtx.background) {
@@ -157,10 +149,7 @@ export function background(): Context {
 export function todo(): Context {
     return EmptyCtx.todo
 }
-/**
- * returns a copy of parent in which the value associated with key is val.
- */
-export function withValue<T>(parent: Context, key: Constructor<T>, val: any): Context {
+function withValue<T>(parent: Context, key: Constructor<T>, val: any): Context {
     return new ValueCtx(parent, key, val)
 }
 class ValueCtx implements Context {
@@ -177,16 +166,11 @@ class ValueCtx implements Context {
     get err(): Exception | undefined {
         return this.parent.err
     }
-    get<T>(key: Constructor<T>): undefined | T {
+    get<T>(key: Constructor<T>): IteratorResult<any> {
         if (this.key === key) {
-            return this.val
-        }
-        const [val] = value(this.parent, key)
-        return val
-    }
-    getRaw<T>(key: Constructor<T>): [undefined, false] | [T, true] {
-        if (this.key === key) {
-            return [this.val, true]
+            return {
+                value: this.val,
+            }
         }
         return value(this.parent, key)
     }
@@ -228,10 +212,8 @@ class ValueCtx implements Context {
         })
     }
 }
-/**
- * returns a copy of parent with a new Done channel. The returned context's Done channel is closed when the returned copy cancel function is called or when the parent context's Done channel is closed, whichever happens first.
- */
-export function withCancel<T>(parent: Context): CancelContext {
+
+function withCancel<T>(parent: Context): CancelContext {
     const ctx = new CancelCtx(parent)
     propagateCancel(parent, ctx)
     return ctx
@@ -286,16 +268,11 @@ class CancelCtx implements CancelContext {
     get err(): Exception | undefined {
         return this.err_
     }
-    get<T>(key: Constructor<T>): T | undefined {
+    get<T>(key: Constructor<T>): IteratorResult<any> {
         if (cancelCtxKey === key) {
-            return this as any
-        }
-        const [val] = value(this.parent, key)
-        return val
-    }
-    getRaw<T>(key: Constructor<T>): [undefined, false] | [T, true] {
-        if (cancelCtxKey === key) {
-            return [this as any, true]
+            return {
+                value: this,
+            }
         }
         return value(this.parent, key)
     }
@@ -337,22 +314,26 @@ class CancelCtx implements CancelContext {
         })
     }
 }
-function value<T>(c: Context, key: Constructor<T>): [undefined, false] | [any, true] {
+function value<T>(c: Context, key: Constructor<T>): IteratorResult<any> {
     while (true) {
         if (c instanceof ValueCtx) {
             if (c.key === key) {
-                return [c.val, true]
+                return {
+                    value: c.val,
+                }
             }
             c = c.parent
         } else if (c instanceof CancelCtx) { // TimerCtx 
             if (cancelCtxKey === key) {
-                return [c, true]
+                return {
+                    value: c,
+                }
             }
             c = c.parent
         } else if (c instanceof EmptyCtx) {
-            return [undefined, false]
+            return noResult
         } else {
-            return c.getRaw(key)
+            return c.get(key)
         }
     }
 }
@@ -412,10 +393,8 @@ function removeChild(parent: Context, child: canceler) {
     }
     p.children_?.delete(child)
 }
-/**
- * returns a copy of the parent context with the deadline adjusted  to be no later than d. If the parent's deadline is already earlier than d, withDeadline(parent, d) is semantically equivalent to parent. The returned context's Done channel is closed when the deadline expires, when the returned cancel function is called, or when the parent context's Done channel is closed, whichever happens first.
- */
-export function withDeadline(parent: Context, d: Date): CancelContext {
+
+function withDeadline(parent: Context, d: Date): CancelContext {
     const cur = parent.deadline
     if (cur && cur.getTime() < d.getTime()) {
         return withCancel(parent)
@@ -424,16 +403,14 @@ export function withDeadline(parent: Context, d: Date): CancelContext {
     propagateCancel(parent, c)
     const dur = d.getTime() - Date.now()
     if (dur <= 0) {
-        c._cancel(true, new DeadlineExceeded()) // deadline has already passed
+        c._cancel(true, errDeadlineExceeded) // deadline has already passed
         return c
     }
     c._serve(dur)
     return c
 }
-/**
- * returns withDeadline(parent, now + millisecond).
- */
-export function withTimeout(parent: Context, ms: number): CancelContext {
+
+function withTimeout(parent: Context, ms: number): CancelContext {
     return withDeadline(parent, new Date(Date.now() + ms))
 }
 class TimerCtx extends CancelCtx implements CancelContext {
@@ -443,7 +420,7 @@ class TimerCtx extends CancelCtx implements CancelContext {
     }
     _serve(ms: number) {
         this.t_ = setTimeout(() => {
-            this._cancel(true, new DeadlineExceeded())
+            this._cancel(true, errDeadlineExceeded)
         }, ms)
     }
     get deadline(): Date | undefined {

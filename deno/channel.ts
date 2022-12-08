@@ -1,4 +1,4 @@
-import { Completer } from './completer.ts'
+import { Completer } from './async.ts'
 import { CodeException } from './exception.ts'
 import { neverPromise, noResult } from './values.ts'
 
