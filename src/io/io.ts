@@ -1,17 +1,12 @@
-// deno-lint-ignore-file no-explicit-any
-import { Exception } from "./core/exception";
-/**
- * means that EOF was encountered in the middle of reading a fixed-size block or data structure.
- */
-export const errUnexpectedEOF = new Exception("unexpected EOF");
-/**
- * means that a read required a longer buffer than was provided.
- */
-export const errShortWrite = new Exception("short write");
-/**
- * means that a write returned an impossible count.
- */
-export const errInvalidWrite = new Exception("invalid write result");
+import { defaultAssert } from "../assert";
+import { CodeException } from "../exception";
+export enum ErrorCode {
+    UnexpectedEOF = 1,
+    ShortWrite = 2,
+    InvalidWrite = 3,
+}
+export class IOException extends CodeException { }
+
 export interface Reader {
     read(b: Uint8Array): Promise<number | null>;
 }
@@ -65,9 +60,11 @@ export async function readAtLeast(
     buf: Uint8Array,
     min: number,
 ): Promise<number> {
-    if (buf.length < min) {
-        throw errShortWrite;
-    }
+    defaultAssert.isUInt({
+        name: 'nin',
+        val: min,
+        max: buf.length,
+    })
     let n = 0;
     while (n < min) {
         const nn = await r.read(buf);
@@ -77,7 +74,7 @@ export async function readAtLeast(
         n += nn;
     }
     if (n < min) {
-        throw errUnexpectedEOF;
+        throw new IOException(ErrorCode.UnexpectedEOF, `readAtLeast read ${n} bytes, ${min} bytes less than expected`);
     }
     return n;
 }
@@ -106,6 +103,10 @@ export class LimitReader implements Reader {
     }
 }
 export function copyN(dst: Writer, src: Reader, n: number): Promise<number> {
+    defaultAssert.isUInt({
+        name: 'n',
+        val: n,
+    })
     return copy(dst, new LimitReader(src, n));
 }
 export async function _copyBuffer(
@@ -139,11 +140,11 @@ export async function _copyBuffer(
         }
         const nw = await dst.write(buf.subarray(0, nr));
         num += nw;
-        if (nr < nw) {
-            throw errInvalidWrite;
+        if (nw < 0 || nr < nw) {
+            throw new IOException(ErrorCode.InvalidWrite, `io returned an invalid number of bytes written, read=${nr} write=${nw}`);
         }
         if (nr != nw) {
-            throw errShortWrite;
+            throw new IOException(ErrorCode.ShortWrite, `io writes fewer bytes than reads, read=${nr} write=${nw}`)
         }
     }
     return num;

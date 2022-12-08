@@ -1,20 +1,21 @@
-// import { ValueCallback } from './core/types';
-// import { Chan, ReadChannel } from './core/channel';
-// import { Exception } from './core/exception';
+import { ValueCallback } from '../types';
+import { Chan, ReadChannel } from '../channel';
+import { Exception } from '../exception';
 
 // export const errTicker = new Exception('non-positive interval for NewTicker')
 
-// export const Millisecond = 1
-// export const Second = 1000 * Millisecond
-// export const Minute = 60 * Second
-// export const Hour = 60 * Minute
-// export const Day = 24 * Hour
+export class TimeException extends Exception { }
 
-// export function sleep(ms: number): Promise<void> {
-//     return new Promise((resolve) => {
-//         setTimeout(() => resolve(), ms)
-//     })
-// }
+export const Millisecond = 1
+export const Second = 1000 * Millisecond
+export const Minute = 60 * Second
+export const Hour = 60 * Minute
+export const Day = 24 * Hour
+
+export function sleep(ms: number): Promise<void> {
+    return ms <= 0 ? Promise.resolve() :
+        new Promise((resolve) => { setTimeout(resolve, ms) })
+}
 
 
 

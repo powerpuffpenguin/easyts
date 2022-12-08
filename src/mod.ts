@@ -1,6 +1,6 @@
 export * from './assert'
+export * from './async'
 export * from './channel'
-export * from './completer'
 export * from './defer'
 export * from './exception'
 export * from './number'

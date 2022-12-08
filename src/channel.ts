@@ -1,4 +1,4 @@
-import { Completer } from "./completer"
+import { Completer } from "./async"
 import { CodeException } from "./exception"
 import { neverPromise, noResult } from "./values"
 
