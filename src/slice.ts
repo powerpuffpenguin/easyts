@@ -1,20 +1,6 @@
-import { Exception } from "./exception";
-import { compare, CompareCallback, MapCallback, ValidCallback, ValueCallback, VoidCallback } from "./types";
 import { noResult } from "./values";
 import { defaultAssert } from './assert'
 import { classForEach, ClassForEach } from './internal/decorator';
-
-// export const errLenOutOfRange = Exception.wrap(errOutOfRange, 'makeslice: len out of range')
-// export const errCapOutOfRange = Exception.wrap(errOutOfRange, 'makeslice: cap out of range')
-// function checkIndex(i: number, len?: number): number {
-//     if (i < 0 || i != Math.floor(i)) {
-//         throw Exception.wrap(errOutOfRange, `index out of range [${i}]`)
-//     }
-//     if (len !== undefined && i >= len) {
-//         throw Exception.wrap(errOutOfRange, `index out of range [${i}] with length ${len}`)
-//     }
-//     return i
-// }
 
 export class Slice<T> extends ClassForEach<T> implements Iterable<T> {
     /**

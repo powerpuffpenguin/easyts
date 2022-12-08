@@ -27,3 +27,21 @@ export class Exception extends Error {
      */
     temporary?: boolean
 }
+
+/**
+ * exception with error code
+ */
+export class CodeException extends Error {
+    /**
+     * 
+     * @param ec error code
+     * @param message 
+     * @param opts 
+     */
+    constructor(public ec: number,
+        message?: string,
+        opts?: ErrorOptions,
+    ) {
+        super(message, opts)
+    }
+}

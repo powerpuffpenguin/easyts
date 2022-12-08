@@ -12,3 +12,16 @@ export declare class Exception extends Error {
      */
     temporary?: boolean;
 }
+/**
+ * exception with error code
+ */
+export declare class CodeException extends Error {
+    ec: number;
+    /**
+     *
+     * @param ec error code
+     * @param message
+     * @param opts
+     */
+    constructor(ec: number, message?: string, opts?: ErrorOptions);
+}
