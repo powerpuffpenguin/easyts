@@ -1,0 +1,12 @@
+export declare const MinInt8 = -128;
+export declare const MinInt16 = -32768;
+export declare const MinInt32 = -2147483648;
+export declare const MinInt64: bigint;
+export declare const MaxInt8 = 127;
+export declare const MaxInt16 = 32767;
+export declare const MaxInt32 = 2147483647;
+export declare const MaxInt64: bigint;
+export declare const MaxUint8 = 255;
+export declare const MaxUint16 = 65535;
+export declare const MaxUint32 = 4294967295;
+export declare const MaxUint64: bigint;
