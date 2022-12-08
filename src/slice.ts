@@ -1,8 +1,8 @@
 import { Exception } from "./exception";
 import { compare, CompareCallback, MapCallback, ValidCallback, ValueCallback, VoidCallback } from "./types";
 import { noResult } from "./values";
-import { assertUInt } from './assert'
-import { methodForEach } from './decorator';
+import { defaultAssert } from './assert'
+import { classForEach, ClassForEach } from './internal/decorator';
 
 // export const errLenOutOfRange = Exception.wrap(errOutOfRange, 'makeslice: len out of range')
 // export const errCapOutOfRange = Exception.wrap(errOutOfRange, 'makeslice: cap out of range')
@@ -16,7 +16,7 @@ import { methodForEach } from './decorator';
 //     return i
 // }
 
-export class Slice<T> implements Iterable<T> {
+export class Slice<T> extends ClassForEach<T> implements Iterable<T> {
     /**
      * Creates a slice attached to the incoming array
      * @throws {@link TypeError}
@@ -26,7 +26,7 @@ export class Slice<T> implements Iterable<T> {
         const len = a.length
         start = start ?? 0
         end = end ?? len
-        assertUInt(
+        defaultAssert.isUInt(
             {
                 name: "start",
                 val: start,
@@ -48,7 +48,7 @@ export class Slice<T> implements Iterable<T> {
      */
     static make<T>(length: number, capacity?: number): Slice<T> {
         capacity = capacity ?? length
-        assertUInt(
+        defaultAssert.isUInt(
             {
                 name: 'length',
                 val: length,
@@ -65,14 +65,17 @@ export class Slice<T> implements Iterable<T> {
     private constructor(public readonly array: Array<T>,
         public readonly start: number,
         public readonly end: number,
-    ) { }
+    ) {
+        super()
+        classForEach((Slice as any))
+    }
     /**
      * Returns the element at index i in the slice
      * @throws {@link TypeError}
      * @throws {@link RangeError}
      */
     get(i: number): T {
-        assertUInt({
+        defaultAssert.isUInt({
             name: "i",
             val: i,
             max: this.length,
@@ -86,7 +89,7 @@ export class Slice<T> implements Iterable<T> {
      * @throws {@link RangeError}
      */
     set(i: number, val: T): void {
-        assertUInt({
+        defaultAssert.isUInt({
             name: "i",
             val: i,
             max: this.length,
@@ -112,19 +115,19 @@ export class Slice<T> implements Iterable<T> {
      * @throws {@link RangeError}
      */
     slice(start?: number, end?: number): Slice<T> {
-        const len = this.length
+        const max = this.capacity
         start = start ?? 0
-        end = end ?? len
-        assertUInt(
+        end = end ?? this.length
+        defaultAssert.isUInt(
             {
                 name: "start",
                 val: start,
-                max: len,
+                max: max,
             },
             {
                 name: "end",
                 val: end,
-                max: len,
+                max: max,
                 min: start,
             },
         )
@@ -221,311 +224,259 @@ export class Slice<T> implements Iterable<T> {
      */
     get reverse(): Iterable<T> {
         const i = this.iterator(true)
-        return {
-            [Symbol.iterator]() {
-                return i
+        return { [Symbol.iterator]() { return i } }
+    }
+}
+/**
+ * Combined into a construct cache
+ */
+export class StringBuilder {
+    private a = new Array<string>()
+    constructor() { }
+    write(...vals: Array<any>) {
+        this.a.push(...vals)
+    }
+    undo(): string | undefined {
+        return this.a.pop()
+    }
+    toString(): string {
+        return this.a.join('')
+    }
+}
+export class Bytes extends ClassForEach<number> implements Iterable<number>{
+    /**
+     * Creates a Bytes attached to the incoming ArrayBuffer
+     * @throws {@link TypeError}
+     * @throws {@link RangeError}
+     */
+    static attach(b: ArrayBuffer, start?: number, end?: number): Bytes {
+        const len = b.byteLength
+        start = start ?? 0
+        end = end ?? len
+        defaultAssert.isUInt(
+            {
+                name: "start",
+                val: start,
+                max: len,
+            },
+            {
+                name: "end",
+                val: end,
+                max: len,
+                min: start,
+            },
+        )
+        return new Bytes(b, start, end)
+    }
+    /**
+     * Create a Bytes
+     * @throws {@link TypeError}
+     * @throws {@link RangeError}
+     */
+    static make(length: number, capacity?: number): Bytes {
+        capacity = capacity ?? length
+        defaultAssert.isUInt(
+            {
+                name: 'length',
+                val: length,
+            },
+            {
+                name: 'capacity',
+                val: capacity,
+                min: length,
+            }
+        )
+        const b = new ArrayBuffer(capacity)
+        return new Bytes(b, 0, length)
+    }
+    /**
+     * Create a Bytes from string
+     */
+    static fromString(str: string): Bytes {
+        const buffer = new TextEncoder().encode(str)
+        return new Bytes(buffer.buffer, 0, buffer.byteLength)
+    }
+    private constructor(public readonly buffer: ArrayBuffer,
+        public readonly start: number,
+        public readonly end: number,
+    ) {
+        super()
+        classForEach((Bytes as any))
+    }
+    /**
+     * return bytes length
+     */
+    get length(): number {
+        return this.end - this.start
+    }
+    /**
+     * return bytes capacity
+     */
+    get capacity(): number {
+        return this.buffer.byteLength - this.start
+    }
+    /**
+     * 
+     * return DataView of Bytes
+     */
+    dateView(): DataView {
+        return new DataView(this.buffer, this.start, this.length)
+    }
+    /**
+     * take sub-slices
+     * @throws {@link TypeError}
+     * @throws {@link RangeError}
+     */
+    slice(start?: number, end?: number): Bytes {
+        const max = this.capacity
+        start = start ?? 0
+        end = end ?? this.length
+        defaultAssert.isUInt(
+            {
+                name: "start",
+                val: start,
+                max: max,
+            },
+            {
+                name: "end",
+                val: end,
+                max: max,
+                min: start,
+            },
+        )
+        const o = this.start
+        return new Bytes(this.buffer, o + start, o + end)
+    }
+    copy(src: Bytes): number {
+        const n = this.length < src.length ? this.length : src.length
+        if (n != 0) {
+            const d = this.dateView()
+            const s = src.dateView()
+            for (let i = 0; i < n; i++) {
+                d.setUint8(i, s.getUint8(i))
+            }
+        }
+        return n
+    }
+    /**
+     * return js iterator
+     * @param reverse If true, returns an iterator to traverse in reverse
+     * @override
+     */
+    iterator(reverse?: boolean): Iterator<number> {
+        const a = this.dateView()
+        let start = 0
+        let end = a.byteLength
+        if (reverse) {
+            let i = end - 1
+            return {
+                next() {
+                    if (i >= start) {
+                        return {
+                            value: a.getUint8(i--),
+                        }
+                    }
+                    return noResult
+                }
+            }
+        } else {
+            let i = start
+            return {
+                next() {
+                    if (i < end) {
+                        return {
+                            value: a.getUint8(i++),
+                        }
+                    }
+                    return noResult
+                }
             }
         }
     }
+    /**
+     * implements js Iterable
+     * @sealedl
+     */
+    [Symbol.iterator](): Iterator<number> {
+        return this.iterator()
+    }
+    /**
+     * Returns an object that implements a js Iterable, but it traverses the data in reverse
+     * @sealed
+     */
+    get reverse(): Iterable<number> {
+        const i = this.iterator(true)
+        return { [Symbol.iterator]() { return i } }
+    }
 
     /**
-     * call callback on each element in the container in turn
-     * @param callback 
-     * @param reverse If true, traverse the container in reverse order
-     * 
-     * @virtual
+     * Add a new element at the end of the slice and return the new slice
      */
-    @methodForEach
-    forEach(callback: ValueCallback<T>, reverse?: boolean): void { }
-    //     /**
-    //      * Traverse the container looking for elements until the callback returns true, then stop looking
-    //      * 
-    //      * @param callback Determine whether it is the element to be found
-    //      * @param reverse If true, traverse the container in reverse order
-    //      * @returns whether the element was found
-    //      * 
-    //      * @virtual
-    //      */
-    //     find(callback: ValidCallback<T>, reverse?: boolean): boolean {
-    //         const it = reverse ? this.reverse : this
-    //         for (const v of it) {
-    //             if (callback(v)) {
-    //                 return true
-    //             }
-    //         }
-    //         return false
-    //     }
-    //     /**
-    //      * Convert container to array
-    //      * @param callback 
-    //      * @param reverse If true, traverse the container in reverse order
-    //      * 
-    //      * @virtual
-    //      */
-    //     map<TO>(callback: MapCallback<T, TO>, reverse?: boolean): Array<TO> {
-    //         const length = this.length
-    //         if (length == 0) {
-    //             return new Array<TO>()
-    //         }
-    //         const it = reverse ? this.reverse : this
-    //         const result = new Array<TO>(length)
-    //         let i = 0
-    //         for (const v of it) {
-    //             result[i++] = callback(v)
-    //         }
-    //         return result
-    //     }
-    //     /**
-    //      * Returns whether the data data exists in the container
-    //      * 
-    //      * @virtual
-    //      */
-    //     has(data: T, reverse?: boolean, callback?: CompareCallback<T>): boolean {
-    //         const it = reverse ? this.reverse : this
-    //         for (const v of it) {
-    //             if (compare(data, v, callback) == 0) {
-    //                 return true
-    //             }
-    //         }
-    //         return false
-    //     }
-    //     /**
-    //      * Adds all the elements of an container into a string, separated by the specified separator string.
-    //      * @param separator 
-    //      * @param separator A string used to separate one element of the container from the next in the resulting string. If omitted, the array elements are separated with a comma.
-    //      */
-    //     join(separator?: string | undefined): string {
-    //         return this.map((v) => `${v}`).join(separator)
-    //     }
-    // }
-
-    // /**
-    //  * Combined into a construct cache
-    //  */
-    // export class StringBuilder {
-    //     private a = new Array<string>()
-    //     constructor() { }
-    //     write(...vals: Array<any>) {
-    //         this.a.push(...vals)
-    //     }
-    //     undo(): string | undefined {
-    //         return this.a.pop()
-    //     }
-    //     toString(): string {
-    //         return this.a.join('')
-    //     }
+    append(...vals: Array<number>): Bytes {
+        const add = vals.length
+        if (add == 0) {
+            return new Bytes(this.buffer, this.start, this.end)
+        }
+        return this._append(new bytesNumber(vals))
+    }
+    appendBytes(...vals: Array<Bytes>): Bytes {
+        let dst = new Bytes(this.buffer, this.start, this.end)
+        for (const v of vals) {
+            dst = dst._append(new bytesView(v.dateView(), v.length))
+        }
+        return dst
+    }
+    appendArrayBuffer(...vals: Array<ArrayBuffer>): Bytes {
+        let dst = new Bytes(this.buffer, this.start, this.end)
+        for (const v of vals) {
+            dst = dst._append(new bytesView(new DataView(v), v.byteLength))
+        }
+        return dst
+    }
+    appendString(str: string): Bytes {
+        if (str.length == 0) {
+            return new Bytes(this.buffer, this.start, this.end)
+        }
+        return this.appendArrayBuffer(new TextEncoder().encode(str).buffer)
+    }
+    private _append(b: bytesLike): Bytes {
+        const add = b.length()
+        if (add == 0) {
+            return new Bytes(this.buffer, this.start, this.end)
+        }
+        let cap = this.capacity
+        const length = this.length
+        const grow = length + add
+        if (grow < cap) {
+            const start = this.end
+            const dst = new Bytes(this.buffer, this.start, start + add)
+            const view = dst.dateView()
+            for (let i = 0; i < add; i++) {
+                view.setUint8(start + i, b.get(i))
+            }
+            return dst
+        }
+        cap = length * 2
+        if (cap < grow) {
+            cap += grow
+        }
+        const src = this.dateView()
+        const buffer = new ArrayBuffer(cap)
+        const view = new DataView(buffer)
+        const dst = new Bytes(buffer, 0, grow)
+        for (let i = 0; i < length; i++) {
+            view.setUint8(i, src.getUint8(i))
+        }
+        const start = this.end
+        for (let i = 0; i < add; i++) {
+            view.setUint8(start + i, b.get(i))
+        }
+        return dst
+    }
+    toString(): string {
+        return new TextDecoder().decode(this.dateView())
+    }
 }
-
-// export class Bytes {
-//     /**
-//      * Creates a Bytes attached to the incoming ArrayBuffer
-//      * @throws {@link core.errOutOfRange} 
-//      */
-//     static attach(b: ArrayBuffer, start?: number, end?: number): Bytes {
-//         if (start === undefined) {
-//             start = 0
-//         }
-//         if (end === undefined) {
-//             end = b.byteLength
-//         }
-//         checkSlice(start, end, b.byteLength)
-//         return new Bytes(b, start, end)
-//     }
-//     /**
-//      * Create a Bytes
-//      * @throws {@link core.errOutOfRange}
-//      */
-//     static make(length: number, capacity?: number): Bytes {
-//         if (!isFinite(length) || length < 0 || length != Math.floor(length)) {
-//             throw errLenOutOfRange
-//         }
-//         if (capacity === undefined) {
-//             capacity = length
-//         } else if (!isFinite(capacity) || capacity < length || capacity != Math.floor(capacity)) {
-//             throw errCapOutOfRange
-//         }
-//         const b = new ArrayBuffer(capacity)
-//         return new Bytes(b, 0, length)
-//     }
-//     /**
-//      * Create a Bytes from string
-//      */
-//     static fromString(str: string): Bytes {
-//         const buffer = new TextEncoder().encode(str)
-//         return new Bytes(buffer.buffer, 0, buffer.byteLength)
-//     }
-//     private constructor(public readonly buffer: ArrayBuffer,
-//         public readonly start: number,
-//         public readonly end: number,
-//     ) {
-//     }
-//     /**
-//      * return bytes length
-//      */
-//     get length(): number {
-//         return this.end - this.start
-//     }
-//     /**
-//      * return bytes capacity
-//      */
-//     get capacity(): number {
-//         return this.buffer.byteLength - this.start
-//     }
-//     /**
-//      * 
-//      * return DataView of Bytes
-//      */
-//     dateView(): DataView {
-//         return new DataView(this.buffer, this.start, this.length)
-//     }
-//     /**
-//      * take sub-slices
-//      */
-//     slice(start?: number, end?: number): Bytes {
-//         if (start === undefined) {
-//             start = 0
-//         }
-//         if (end === undefined) {
-//             end = this.end
-//         }
-//         checkSlice(start, end, this.capacity)
-//         const o = this.start
-//         return new Bytes(this.buffer, o + start, o + end)
-//     }
-//     copy(src: Bytes): number {
-//         const n = this.length < src.length ? this.length : src.length
-//         if (n != 0) {
-//             const d = this.dateView()
-//             const s = src.dateView()
-//             for (let i = 0; i < n; i++) {
-//                 d.setUint8(i, s.getUint8(i))
-//             }
-//         }
-//         return n
-//     }
-//     /**
-//      * return js iterator
-//      * @param reverse If true, returns an iterator to traverse in reverse
-//      * @override
-//      */
-//     iterator(reverse?: boolean): Iterator<number> {
-//         const a = this.dateView()
-//         let start = 0
-//         let end = a.byteLength
-//         if (reverse) {
-//             let i = end - 1
-//             return {
-//                 next() {
-//                     if (i >= start) {
-//                         return {
-//                             value: a.getUint8(i--),
-//                         }
-//                     }
-//                     return noResult
-//                 }
-//             }
-//         } else {
-//             let i = start
-//             return {
-//                 next() {
-//                     if (i < end) {
-//                         return {
-//                             value: a.getUint8(i++),
-//                         }
-//                     }
-//                     return noResult
-//                 }
-//             }
-//         }
-//     }
-//     /**
-//      * implements js Iterable
-//      * @sealedl
-//      */
-//     [Symbol.iterator](): Iterator<number> {
-//         return this.iterator()
-//     }
-//     /**
-//      * Returns an object that implements a js Iterable, but it traverses the data in reverse
-//      * @sealed
-//      */
-//     get reverse(): Iterable<number> {
-//         const i = this.iterator(true)
-//         return {
-//             [Symbol.iterator]() {
-//                 return i
-//             }
-//         }
-//     }
-
-//     /**
-//      * Add a new element at the end of the slice and return the new slice
-//      */
-//     append(...vals: Array<number>): Bytes {
-//         const add = vals.length
-//         if (add == 0) {
-//             return new Bytes(this.buffer, this.start, this.end)
-//         }
-//         return this._append(new bytesNumber(vals))
-//     }
-//     appendBytes(...vals: Array<Bytes>): Bytes {
-//         let dst = new Bytes(this.buffer, this.start, this.end)
-//         for (const v of vals) {
-//             dst = dst._append(new bytesView(v.dateView(), v.length))
-//         }
-//         return dst
-//     }
-//     appendArrayBuffer(...vals: Array<ArrayBuffer>): Bytes {
-//         let dst = new Bytes(this.buffer, this.start, this.end)
-//         for (const v of vals) {
-//             dst = dst._append(new bytesView(new DataView(v), v.byteLength))
-//         }
-//         return dst
-//     }
-//     appendString(str: string): Bytes {
-//         if (str.length == 0) {
-//             return new Bytes(this.buffer, this.start, this.end)
-//         }
-//         return this.appendArrayBuffer(new TextEncoder().encode(str).buffer)
-//     }
-//     private _append(b: bytesLike): Bytes {
-//         const add = b.length()
-//         if (add == 0) {
-//             return new Bytes(this.buffer, this.start, this.end)
-//         }
-//         let cap = this.capacity
-//         const length = this.length
-//         const grow = length + add
-//         if (grow < cap) {
-//             const start = this.end
-//             const dst = new Bytes(this.buffer, this.start, start + add)
-//             const view = dst.dateView()
-//             for (let i = 0; i < add; i++) {
-//                 view.setUint8(start + i, b.get(i))
-//             }
-//             return dst
-//         }
-//         cap = length * 2
-//         if (cap < grow) {
-//             cap += grow
-//         }
-//         const src = this.dateView()
-//         const buffer = new ArrayBuffer(cap)
-//         const view = new DataView(buffer)
-//         const dst = new Bytes(buffer, 0, grow)
-//         for (let i = 0; i < length; i++) {
-//             view.setUint8(i, src.getUint8(i))
-//         }
-//         const start = this.end
-//         for (let i = 0; i < add; i++) {
-//             view.setUint8(start + i, b.get(i))
-//         }
-//         return dst
-//     }
-//     toString(): string {
-//         return new TextDecoder().decode(this.dateView())
-//     }
-// }
 class bytesView {
     constructor(public readonly view: DataView,
         public readonly len: number,

@@ -1,5 +1,5 @@
 export * from './assert';
-export * from './decorator';
+export * from './internal/decorator';
 export * from './number';
 export * from './slice';
 export * from './types';
