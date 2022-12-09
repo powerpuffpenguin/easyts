@@ -10,11 +10,11 @@ export interface NumberValue extends Value {
     notMax?: boolean;
 }
 /**
- * @throws {@link TypeError}
+ * @throws TypeError
  */
 export declare function throwType(val: Value, typeName: string): never;
 /**
- * @throws {@link RangeError}
+ * @throws RangeError
  */
 export declare function throwNumber(val: NumberValue, typeName: string, min: boolean): never;
 export declare type AssertCallback = (val: Assert) => void;
@@ -25,23 +25,23 @@ export declare class Assert {
      */
     enable: boolean;
     /**
-     * @throws {@link TypeError}
-     * @throws {@link RangeError}
+     * @throws TypeError
+     * @throws RangeError
      */
     isNumber(...vals: Array<NumberValue>): void;
     /**
-     * @throws {@link TypeError}
-     * @throws {@link RangeError}
+     * @throws TypeError
+     * @throws RangeError
      */
     isInt(...vals: Array<NumberValue>): void;
     /**
-     * @throws {@link TypeError}
-     * @throws {@link RangeError}
+     * @throws TypeError
+     * @throws RangeError
      */
     isUInt(...vals: Array<NumberValue>): void;
     /**
-     * @throws {@link TypeError}
-     * @throws {@link RangeError}
+     * @throws TypeError
+     * @throws RangeError
      */
     isAny(assert: AssertCallback, ...vals: Array<Assert>): void;
 }

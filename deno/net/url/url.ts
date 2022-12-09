@@ -910,7 +910,7 @@ export class URL {
      * The url may be relative (a path, without a host) or absolute (starting with a scheme). Trying to parse a hostname and path without a scheme is invalid but may not necessarily return an error, due to parsing ambiguities.
      * 
      * @throws {@link URLException}
-     * @throws {@link Exception}
+     * @throws Exception
      */
     static parse(rawURL: string): URL {
         // Cut off #frag
@@ -945,7 +945,7 @@ export class URL {
      * (Web browsers strip #fragment before sending the URL to a web server.)
      * 
      * @throws {@link URLException}
-     * @throws {@link Exception}
+     * @throws Exception
      */
     static parseRequestURI(rawURL: string): URL {
         try {

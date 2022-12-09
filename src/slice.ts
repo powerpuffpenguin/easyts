@@ -5,8 +5,8 @@ import { classForEach, ClassForEach } from './internal/decorator';
 export class Slice<T> extends ClassForEach<T> implements Iterable<T> {
     /**
      * Creates a slice attached to the incoming array
-     * @throws {@link TypeError}
-     * @throws {@link RangeError}
+     * @throws TypeError
+     * @throws RangeError
      */
     static attach<T>(a: Array<T>, start?: number, end?: number): Slice<T> {
         const len = a.length
@@ -29,8 +29,8 @@ export class Slice<T> extends ClassForEach<T> implements Iterable<T> {
     }
     /**
      * Create a slice
-     * @throws {@link TypeError}
-     * @throws {@link RangeError}
+     * @throws TypeError
+     * @throws RangeError
      */
     static make<T>(length: number, capacity?: number): Slice<T> {
         capacity = capacity ?? length
@@ -57,8 +57,8 @@ export class Slice<T> extends ClassForEach<T> implements Iterable<T> {
     }
     /**
      * Returns the element at index i in the slice
-     * @throws {@link TypeError}
-     * @throws {@link RangeError}
+     * @throws TypeError
+     * @throws RangeError
      */
     get(i: number): T {
         defaultAssert.isUInt({
@@ -71,8 +71,8 @@ export class Slice<T> extends ClassForEach<T> implements Iterable<T> {
     }
     /**
      * Sets the element at index i in the slice to val
-     * @throws {@link TypeError}
-     * @throws {@link RangeError}
+     * @throws TypeError
+     * @throws RangeError
      */
     set(i: number, val: T): void {
         defaultAssert.isUInt({
@@ -97,8 +97,8 @@ export class Slice<T> extends ClassForEach<T> implements Iterable<T> {
     }
     /**
      * take sub-slices
-     * @throws {@link TypeError}
-     * @throws {@link RangeError}
+     * @throws TypeError
+     * @throws RangeError
      */
     slice(start?: number, end?: number): Slice<T> {
         const max = this.capacity
@@ -232,8 +232,8 @@ export class StringBuilder {
 export class Bytes extends ClassForEach<number> implements Iterable<number>{
     /**
      * Creates a Bytes attached to the incoming ArrayBuffer
-     * @throws {@link TypeError}
-     * @throws {@link RangeError}
+     * @throws TypeError
+     * @throws RangeError
      */
     static attach(b: ArrayBuffer, start?: number, end?: number): Bytes {
         const len = b.byteLength
@@ -256,8 +256,8 @@ export class Bytes extends ClassForEach<number> implements Iterable<number>{
     }
     /**
      * Create a Bytes
-     * @throws {@link TypeError}
-     * @throws {@link RangeError}
+     * @throws TypeError
+     * @throws RangeError
      */
     static make(length: number, capacity?: number): Bytes {
         capacity = capacity ?? length
@@ -310,8 +310,8 @@ export class Bytes extends ClassForEach<number> implements Iterable<number>{
     }
     /**
      * take sub-slices
-     * @throws {@link TypeError}
-     * @throws {@link RangeError}
+     * @throws TypeError
+     * @throws RangeError
      */
     slice(start?: number, end?: number): Bytes {
         const max = this.capacity

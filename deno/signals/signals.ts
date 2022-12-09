@@ -1,4 +1,4 @@
-import { VoidCallback } from "./types"
+import { VoidCallback } from '../types.ts'
 /**
  * sadsaasdsa
  */

@@ -39,7 +39,7 @@ export class WaitGroup {
      * If the counter goes negative, Add throws Exception.
      * @param delta WaitGroup.counter += delta
      *
-     * @throws {@link Exception}
+     * @throws Exception
      */
     add(delta) {
         if (delta === 0) {
@@ -71,7 +71,7 @@ export class WaitGroup {
     /**
      * Done decrements the WaitGroup counter by one.
      *
-     * @throws {@link Exception}
+     * @throws Exception
      */
     done() {
         this.add(-1);

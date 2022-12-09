@@ -52,8 +52,8 @@ function down(h, i0, n, cf) {
 }
 /**
  * Fix re-establishes the heap ordering after the element at index i has changed its value.
- * @throws {@link TypeError}
- * @throws {@link RangeError}
+ * @throws TypeError
+ * @throws RangeError
  */
 export function fix(h, i, cf) {
     defaultAssert.isUInt({
@@ -69,7 +69,6 @@ export function fix(h, i, cf) {
 /**
  * Pop removes and returns the minimum element (according to cf or <) from the heap.
  *
- * @throws {@link core.errOutOfRange}
  */
 export function pop(h, cf, rf) {
     const n = h.length - 1;
@@ -114,7 +113,8 @@ export function push(h, val, cf) {
 /**
  * Remove removes and returns the element at index i from the heap.
  *
- * @throws {@link core.errOutOfRange}
+ * @throws TypeError
+ * @throws RangeError
  */
 export function remove(h, i, cf, rf) {
     defaultAssert.isUInt({
@@ -183,7 +183,8 @@ export class Heap extends Basic {
     }
     /**
      * get heap array element
-     * @throws {@link core.errOutOfRange}
+     * @throws TypeError
+     * @throws RangeError
      */
     get(i) {
         const h = this.h_;
@@ -197,7 +198,8 @@ export class Heap extends Basic {
     }
     /**
      * set heap array element
-     * @throws {@link core.errOutOfRange}
+     * @throws TypeError
+     * @throws RangeError
      */
     set(i, val) {
         var _a;
@@ -247,7 +249,8 @@ export class Heap extends Basic {
     /**
      * Remove removes and returns the element at index i from the heap.
      *
-     * @throws {@link core.errOutOfRange}
+     * @throws TypeError
+     * @throws RangeError
      */
     remove(i) {
         var _a, _b;

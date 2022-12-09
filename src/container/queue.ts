@@ -45,8 +45,8 @@ export class Queue<T> extends Basic<T> {
     }
     /**
      * get queue element
-     * @throws {@link TypeError}
-     * @throws {@link RangeError}
+     * @throws TypeError
+     * @throws RangeError
      */
     get(i: number): T {
         defaultAssert.isUInt({
@@ -60,8 +60,8 @@ export class Queue<T> extends Basic<T> {
     }
     /**
      * set queue element
-     * @throws {@link TypeError}
-     * @throws {@link RangeError}
+     * @throws TypeError
+     * @throws RangeError
      */
     set(i: number, val: T): void {
         defaultAssert.isUInt({

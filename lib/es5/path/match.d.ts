@@ -19,9 +19,9 @@
  * 		lo '-' hi   matches character c for lo <= c <= hi
  * ```
  * Match requires pattern to match all of name, not just a substring.
- * The only possible throw error is ErrBadPattern, when pattern is malformed.
+ * The only possible throw error is SyntaxError, when pattern is malformed.
  *
- * @throws {@link errBadPattern}
+ * @throws SyntaxError
  *
  * @example
  * ```

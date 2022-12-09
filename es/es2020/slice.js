@@ -11,8 +11,8 @@ export class Slice extends ClassForEach {
     }
     /**
      * Creates a slice attached to the incoming array
-     * @throws {@link TypeError}
-     * @throws {@link RangeError}
+     * @throws TypeError
+     * @throws RangeError
      */
     static attach(a, start, end) {
         const len = a.length;
@@ -32,8 +32,8 @@ export class Slice extends ClassForEach {
     }
     /**
      * Create a slice
-     * @throws {@link TypeError}
-     * @throws {@link RangeError}
+     * @throws TypeError
+     * @throws RangeError
      */
     static make(length, capacity) {
         capacity = capacity ?? length;
@@ -50,8 +50,8 @@ export class Slice extends ClassForEach {
     }
     /**
      * Returns the element at index i in the slice
-     * @throws {@link TypeError}
-     * @throws {@link RangeError}
+     * @throws TypeError
+     * @throws RangeError
      */
     get(i) {
         defaultAssert.isUInt({
@@ -64,8 +64,8 @@ export class Slice extends ClassForEach {
     }
     /**
      * Sets the element at index i in the slice to val
-     * @throws {@link TypeError}
-     * @throws {@link RangeError}
+     * @throws TypeError
+     * @throws RangeError
      */
     set(i, val) {
         defaultAssert.isUInt({
@@ -90,8 +90,8 @@ export class Slice extends ClassForEach {
     }
     /**
      * take sub-slices
-     * @throws {@link TypeError}
-     * @throws {@link RangeError}
+     * @throws TypeError
+     * @throws RangeError
      */
     slice(start, end) {
         const max = this.capacity;
@@ -230,8 +230,8 @@ export class Bytes extends ClassForEach {
     }
     /**
      * Creates a Bytes attached to the incoming ArrayBuffer
-     * @throws {@link TypeError}
-     * @throws {@link RangeError}
+     * @throws TypeError
+     * @throws RangeError
      */
     static attach(b, start, end) {
         const len = b.byteLength;
@@ -251,8 +251,8 @@ export class Bytes extends ClassForEach {
     }
     /**
      * Create a Bytes
-     * @throws {@link TypeError}
-     * @throws {@link RangeError}
+     * @throws TypeError
+     * @throws RangeError
      */
     static make(length, capacity) {
         capacity = capacity ?? length;
@@ -295,8 +295,8 @@ export class Bytes extends ClassForEach {
     }
     /**
      * take sub-slices
-     * @throws {@link TypeError}
-     * @throws {@link RangeError}
+     * @throws TypeError
+     * @throws RangeError
      */
     slice(start, end) {
         const max = this.capacity;

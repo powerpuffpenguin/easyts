@@ -32,14 +32,14 @@ export declare class Queue<T> extends Basic<T> {
     get capacity(): number;
     /**
      * get queue element
-     * @throws {@link TypeError}
-     * @throws {@link RangeError}
+     * @throws TypeError
+     * @throws RangeError
      */
     get(i: number): T;
     /**
      * set queue element
-     * @throws {@link TypeError}
-     * @throws {@link RangeError}
+     * @throws TypeError
+     * @throws RangeError
      */
     set(i: number, val: T): void;
     /**

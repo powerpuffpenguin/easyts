@@ -11,7 +11,7 @@ export interface NumberValue extends Value {
     notMax?: boolean
 }
 /**
- * @throws {@link TypeError}
+ * @throws TypeError
  */
 export function throwType(val: Value, typeName: string): never {
     if (val.message !== undefined) {
@@ -23,7 +23,7 @@ export function throwType(val: Value, typeName: string): never {
     throw new TypeError(`argument '${val.name}' expects ${typeName} type`)
 }
 /**
- * @throws {@link RangeError}
+ * @throws RangeError
  */
 export function throwNumber(val: NumberValue, typeName: string, min: boolean): never {
     if (val.message !== undefined) {
@@ -52,8 +52,8 @@ export class Assert {
     enable = true
 
     /**
-     * @throws {@link TypeError}
-     * @throws {@link RangeError}
+     * @throws TypeError
+     * @throws RangeError
      */
     isNumber(...vals: Array<NumberValue>) {
         if (!this.enable) {
@@ -78,8 +78,8 @@ export class Assert {
         }
     }
     /**
-     * @throws {@link TypeError}
-     * @throws {@link RangeError}
+     * @throws TypeError
+     * @throws RangeError
      */
     isInt(...vals: Array<NumberValue>) {
         if (!this.enable) {
@@ -104,8 +104,8 @@ export class Assert {
         }
     }
     /**
-     * @throws {@link TypeError}
-     * @throws {@link RangeError}
+     * @throws TypeError
+     * @throws RangeError
      */
     isUInt(...vals: Array<NumberValue>) {
         if (!this.enable) {
@@ -130,8 +130,8 @@ export class Assert {
         }
     }
     /**
-     * @throws {@link TypeError}
-     * @throws {@link RangeError}
+     * @throws TypeError
+     * @throws RangeError
      */
     isAny(assert: AssertCallback, ...vals: Array<Assert>) {
         if (!this.enable) {

@@ -5,27 +5,27 @@ export declare class Slice<T> extends ClassForEach<T> implements Iterable<T> {
     readonly end: number;
     /**
      * Creates a slice attached to the incoming array
-     * @throws {@link TypeError}
-     * @throws {@link RangeError}
+     * @throws TypeError
+     * @throws RangeError
      */
     static attach<T>(a: Array<T>, start?: number, end?: number): Slice<T>;
     /**
      * Create a slice
-     * @throws {@link TypeError}
-     * @throws {@link RangeError}
+     * @throws TypeError
+     * @throws RangeError
      */
     static make<T>(length: number, capacity?: number): Slice<T>;
     private constructor();
     /**
      * Returns the element at index i in the slice
-     * @throws {@link TypeError}
-     * @throws {@link RangeError}
+     * @throws TypeError
+     * @throws RangeError
      */
     get(i: number): T;
     /**
      * Sets the element at index i in the slice to val
-     * @throws {@link TypeError}
-     * @throws {@link RangeError}
+     * @throws TypeError
+     * @throws RangeError
      */
     set(i: number, val: T): void;
     /**
@@ -38,8 +38,8 @@ export declare class Slice<T> extends ClassForEach<T> implements Iterable<T> {
     get capacity(): number;
     /**
      * take sub-slices
-     * @throws {@link TypeError}
-     * @throws {@link RangeError}
+     * @throws TypeError
+     * @throws RangeError
      */
     slice(start?: number, end?: number): Slice<T>;
     /**
@@ -84,14 +84,14 @@ export declare class Bytes extends ClassForEach<number> implements Iterable<numb
     readonly end: number;
     /**
      * Creates a Bytes attached to the incoming ArrayBuffer
-     * @throws {@link TypeError}
-     * @throws {@link RangeError}
+     * @throws TypeError
+     * @throws RangeError
      */
     static attach(b: ArrayBuffer, start?: number, end?: number): Bytes;
     /**
      * Create a Bytes
-     * @throws {@link TypeError}
-     * @throws {@link RangeError}
+     * @throws TypeError
+     * @throws RangeError
      */
     static make(length: number, capacity?: number): Bytes;
     /**
@@ -114,8 +114,8 @@ export declare class Bytes extends ClassForEach<number> implements Iterable<numb
     dateView(): DataView;
     /**
      * take sub-slices
-     * @throws {@link TypeError}
-     * @throws {@link RangeError}
+     * @throws TypeError
+     * @throws RangeError
      */
     slice(start?: number, end?: number): Bytes;
     copy(src: Bytes): number;

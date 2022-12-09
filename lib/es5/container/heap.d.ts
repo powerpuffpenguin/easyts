@@ -6,14 +6,13 @@ import { Basic, Options, Container } from "./types";
 export declare function heapify<T>(h: Array<T>, cf?: CompareCallback<T>): Array<T>;
 /**
  * Fix re-establishes the heap ordering after the element at index i has changed its value.
- * @throws {@link TypeError}
- * @throws {@link RangeError}
+ * @throws TypeError
+ * @throws RangeError
  */
 export declare function fix<T>(h: Array<T>, i: number, cf?: CompareCallback<T>): void;
 /**
  * Pop removes and returns the minimum element (according to cf or <) from the heap.
  *
- * @throws {@link core.errOutOfRange}
  */
 export declare function pop<T>(h: Array<T>, cf?: CompareCallback<T>, rf?: DeleteCallback<T>): ReturnValue<T>;
 export declare function popRaw<T>(h: Array<T>, cf?: CompareCallback<T>, rf?: DeleteCallback<T>): ReturnValueRaw<T>;
@@ -24,7 +23,8 @@ export declare function push<T>(h: Array<T>, val: T, cf?: CompareCallback<T>): v
 /**
  * Remove removes and returns the element at index i from the heap.
  *
- * @throws {@link core.errOutOfRange}
+ * @throws TypeError
+ * @throws RangeError
  */
 export declare function remove<T>(h: Array<T>, i: number, cf?: CompareCallback<T>, rf?: DeleteCallback<T>): T;
 export declare class Heap<T> extends Basic<T> implements Container<T> {
@@ -56,12 +56,14 @@ export declare class Heap<T> extends Basic<T> implements Container<T> {
     get capacity(): number;
     /**
      * get heap array element
-     * @throws {@link core.errOutOfRange}
+     * @throws TypeError
+     * @throws RangeError
      */
     get(i: number): T;
     /**
      * set heap array element
-     * @throws {@link core.errOutOfRange}
+     * @throws TypeError
+     * @throws RangeError
      */
     set(i: number, val: T): void;
     constructor(opts?: Options<T>, heap?: Array<T>);
@@ -80,7 +82,8 @@ export declare class Heap<T> extends Basic<T> implements Container<T> {
     /**
      * Remove removes and returns the element at index i from the heap.
      *
-     * @throws {@link core.errOutOfRange}
+     * @throws TypeError
+     * @throws RangeError
      */
     remove(i: number): T;
     /**

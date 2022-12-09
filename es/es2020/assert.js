@@ -1,5 +1,5 @@
 /**
- * @throws {@link TypeError}
+ * @throws TypeError
  */
 export function throwType(val, typeName) {
     if (val.message !== undefined) {
@@ -11,7 +11,7 @@ export function throwType(val, typeName) {
     throw new TypeError(`argument '${val.name}' expects ${typeName} type`);
 }
 /**
- * @throws {@link RangeError}
+ * @throws RangeError
  */
 export function throwNumber(val, typeName, min) {
     if (val.message !== undefined) {
@@ -40,8 +40,8 @@ export class Assert {
         this.enable = true;
     }
     /**
-     * @throws {@link TypeError}
-     * @throws {@link RangeError}
+     * @throws TypeError
+     * @throws RangeError
      */
     isNumber(...vals) {
         if (!this.enable) {
@@ -67,8 +67,8 @@ export class Assert {
         }
     }
     /**
-     * @throws {@link TypeError}
-     * @throws {@link RangeError}
+     * @throws TypeError
+     * @throws RangeError
      */
     isInt(...vals) {
         if (!this.enable) {
@@ -94,8 +94,8 @@ export class Assert {
         }
     }
     /**
-     * @throws {@link TypeError}
-     * @throws {@link RangeError}
+     * @throws TypeError
+     * @throws RangeError
      */
     isUInt(...vals) {
         if (!this.enable) {
@@ -121,8 +121,8 @@ export class Assert {
         }
     }
     /**
-     * @throws {@link TypeError}
-     * @throws {@link RangeError}
+     * @throws TypeError
+     * @throws RangeError
      */
     isAny(assert, ...vals) {
         if (!this.enable) {
