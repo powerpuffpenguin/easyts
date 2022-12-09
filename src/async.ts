@@ -1,3 +1,5 @@
+import { notImplement } from "./internal/decorator"
+
 /**
  * Create a Promise with a completion marker
  * 
@@ -81,5 +83,52 @@ export class Completer<T>{
         if (this.reject_) {
             this.reject_(reason)
         }
+    }
+}
+
+export type AssetLoadCallback<T> = () => Promise<T>
+/**
+ * an asynchronous asset
+ */
+export class Asset<T>{
+    static make<T>(callback: AssetLoadCallback<T>): Asset<T> {
+        return new _Asset<T>(callback)
+    }
+    private ok_ = false
+    private asset_?: T
+    private done_?: Completer<T>
+    get asset(): T | Promise<T> {
+        if (this.ok_) {
+            return this.asset_!
+        }
+        return (async () => {
+            let done = this.done_
+            if (done) {
+                return done.promise
+            }
+            done = new Completer<T>()
+            try {
+                const val = await this._load()
+                this.ok_ = true
+                this.asset_ = val
+                done.resolve(val)
+            } catch (e) {
+                this.done_ = undefined
+                done.reject(e)
+            }
+            return done.promise
+        })()
+    }
+    protected _load(): Promise<T> {
+        throw new EvalError(notImplement(this.constructor.name, 'protected _load(): Promise<T>'));
+    }
+}
+class _Asset<T> extends Asset<T>{
+    constructor(public readonly callback: AssetLoadCallback<T>) {
+        super()
+    }
+    protected _load(): Promise<T> {
+        const callback = this.callback
+        return callback()
     }
 }

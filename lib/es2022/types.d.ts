@@ -4,6 +4,10 @@ export declare type Constructor<T> = new (...args: any[]) => T;
  */
 export declare type VoidCallback = () => void;
 /**
+* callback function with no arguments
+*/
+export declare type AsyncVoidCallback = () => Promise<void>;
+/**
  * callback function with one parameter
  */
 export declare type ValueCallback<T> = (val: T) => void;

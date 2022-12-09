@@ -9,4 +9,6 @@ import './container/queue_test'
 
 import './context/context_test'
 
+import './sync/sync_test'
+
 import './time/time_test'

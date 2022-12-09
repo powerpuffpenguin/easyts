@@ -1,8 +1,11 @@
-import { Completer } from "../core";
+import { Completer } from "../async";
+import { Exception } from "../exception";
 import { Once } from "./once";
 import { WaitGroup } from "./waitgroup";
-import { errMutexUnlock, Mutex } from "./mutex";
-import { errRWMutexRUnlock, RWMutex } from "./rwmutex";
+import { Mutex, MutexException } from "./mutex";
+import { RWMutex } from "./rwmutex";
+const errMutexUnlock = new MutexException('unlock of unlocked mutex')
+const errRWMutexRUnlock = new MutexException('readUnlock of unrlocked rwmutex')
 QUnit.module('sync', hooks => {
     QUnit.test('Once', async (assert) => {
         const o = new Once()

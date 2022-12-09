@@ -1,5 +1,5 @@
-import { Completer } from "../core/completer";
-import { Exception } from "../core/exception";
+import { Completer } from "../async";
+import { Exception } from "../exception";
 
 /**
  * A Locker represents an object that can be locked and unlocked.
@@ -10,7 +10,7 @@ export interface Locker {
     unlock(): void
 }
 
-export const errMutexUnlock = new Exception('unlock of unlocked mutex')
+export class MutexException extends Exception { }
 /**
  * a mutual exclusion lock.
  */
@@ -53,9 +53,9 @@ export class Mutex implements Locker {
      * unlocks
      * 
      * @remarks
-     * if is not locked on entry to Unlock, throw {@link errMutexUnlock}
+     * if is not locked on entry to Unlock, throw {@link MutexException}
      * 
-     * @throws {@link errMutexUnlock}
+     * @throws {@link MutexException}
      */
     unlock(): void {
         const c = this.c_
@@ -63,7 +63,7 @@ export class Mutex implements Locker {
             this.c_ = undefined
             c.resolve()
         } else {
-            throw errMutexUnlock
+            throw new MutexException('unlock of unlocked mutex')
         }
     }
 }

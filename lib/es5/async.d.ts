@@ -58,3 +58,15 @@ export declare class Completer<T> {
      */
     reject(reason?: any): void;
 }
+export declare type AssetLoadCallback<T> = () => Promise<T>;
+/**
+ * an asynchronous asset
+ */
+export declare class Asset<T> {
+    static make<T>(callback: AssetLoadCallback<T>): Asset<T>;
+    private ok_;
+    private asset_?;
+    private done_?;
+    get asset(): T | Promise<T>;
+    protected _load(): Promise<T>;
+}

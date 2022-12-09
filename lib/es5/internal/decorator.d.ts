@@ -3,9 +3,8 @@ export interface ForEach<T> {
     iterator(reverse?: boolean): Iterator<T>;
     readonly length: number;
 }
+export declare function notImplement(c: string, f: string): string;
 export declare class ClassForEach<T> implements ForEach<T> {
-    private __name__;
-    constructor();
     /**
      * @virtual
      */
