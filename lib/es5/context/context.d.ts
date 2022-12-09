@@ -7,10 +7,7 @@ export declare class CanceleException extends Exception {
 export declare class DeadlineExceeded extends Exception {
     constructor(message?: string, opts?: ErrorOptions);
 }
-/**
- * errDeadlineExceeded is the error returned by context.err() when the context's deadline passes.
- */
-export declare const errDeadlineExceeded: DeadlineExceeded;
+export declare type CancelFunc = (reason?: any) => void;
 /**
  * A Context carries a deadline, a cancellation signal, and other values across API boundaries.
  */
@@ -53,13 +50,25 @@ export interface Context {
      */
     withCancel(): CancelContext;
     /**
+    * returns a copy of this with a new Done channel. The returned context's Done channel is closed when the returned copy cancel function is called or when the parent context's Done channel is closed, whichever happens first.
+    */
+    withCancel(cancelFunc: true): [CancelContext, CancelFunc];
+    /**
      * returns withDeadline(now + millisecond).
      */
     withTimeout(ms: number): CancelContext;
     /**
+     * returns withDeadline(now + millisecond).
+     */
+    withTimeout(ms: number, cancelFunc: true): [CancelContext, CancelFunc];
+    /**
      * returns a copy of the this context with the deadline adjusted  to be no later than d. If the this's deadline is already earlier than d, withDeadline(d) is semantically equivalent to this. The returned context's Done channel is closed when the deadline expires, when the returned cancel function is called, or when the this context's Done channel is closed, whichever happens first.
      */
     withDeadline(d: Date): CancelContext;
+    /**
+    * returns a copy of the this context with the deadline adjusted  to be no later than d. If the this's deadline is already earlier than d, withDeadline(d) is semantically equivalent to this. The returned context's Done channel is closed when the deadline expires, when the returned cancel function is called, or when the this context's Done channel is closed, whichever happens first.
+    */
+    withDeadline(d: Date, cancelFunc: true): [CancelContext, CancelFunc];
 }
 export interface CancelContext extends Context {
     /**

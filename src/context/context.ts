@@ -18,10 +18,8 @@ export class DeadlineExceeded extends Exception {
     }
 }
 
-/**
- * errDeadlineExceeded is the error returned by context.err() when the context's deadline passes.
- */
-export const errDeadlineExceeded = new DeadlineExceeded()
+export type CancelFunc = (reason?: any) => void
+
 /**
  * A Context carries a deadline, a cancellation signal, and other values across API boundaries.
  */
@@ -65,14 +63,25 @@ export interface Context {
      */
     withCancel(): CancelContext
     /**
+    * returns a copy of this with a new Done channel. The returned context's Done channel is closed when the returned copy cancel function is called or when the parent context's Done channel is closed, whichever happens first.
+    */
+    withCancel(cancelFunc: true): [CancelContext, CancelFunc]
+    /**
      * returns withDeadline(now + millisecond).
      */
     withTimeout(ms: number): CancelContext
     /**
+     * returns withDeadline(now + millisecond).
+     */
+    withTimeout(ms: number, cancelFunc: true): [CancelContext, CancelFunc]
+    /**
      * returns a copy of the this context with the deadline adjusted  to be no later than d. If the this's deadline is already earlier than d, withDeadline(d) is semantically equivalent to this. The returned context's Done channel is closed when the deadline expires, when the returned cancel function is called, or when the this context's Done channel is closed, whichever happens first.
      */
     withDeadline(d: Date): CancelContext
-
+    /**
+    * returns a copy of the this context with the deadline adjusted  to be no later than d. If the this's deadline is already earlier than d, withDeadline(d) is semantically equivalent to this. The returned context's Done channel is closed when the deadline expires, when the returned cancel function is called, or when the this context's Done channel is closed, whichever happens first.
+    */
+    withDeadline(d: Date, cancelFunc: true): [CancelContext, CancelFunc]
 }
 
 export interface CancelContext extends Context {
@@ -108,14 +117,20 @@ class EmptyCtx implements Context {
     withValue<T>(key: Constructor<T>, val: any): Context {
         return withValue(this, key, val)
     }
-    withCancel(): CancelContext {
-        return withCancel(this)
+    withCancel(): CancelContext;
+    withCancel(cancelFunc: true): [CancelContext, CancelFunc];
+    withCancel(cancelFunc?: true): CancelContext | [CancelContext, CancelFunc] {
+        return withCancel(this, cancelFunc)
     }
-    withTimeout(ms: number): CancelContext {
-        return withTimeout(this, ms)
+    withTimeout(ms: number): CancelContext;
+    withTimeout(ms: number, cancelFunc: true): [CancelContext, CancelFunc];
+    withTimeout(ms: number, cancelFunc?: true): CancelContext | [CancelContext, CancelFunc] {
+        return withTimeout(this, ms, cancelFunc)
     }
-    withDeadline(d: Date): CancelContext {
-        return withDeadline(this, d)
+    withDeadline(d: Date): CancelContext;
+    withDeadline(d: Date, cancelFunc: true): [CancelContext, CancelFunc];
+    withDeadline(d: Date, cancelFunc?: true): CancelContext | [CancelContext, CancelFunc] {
+        return withDeadline(this, d, cancelFunc)
     }
     get isClosed(): boolean {
         return this.err !== undefined
@@ -180,14 +195,20 @@ class ValueCtx implements Context {
     withValue<T>(key: Constructor<T>, val: any): Context {
         return withValue(this, key, val)
     }
-    withCancel(): CancelContext {
-        return withCancel(this)
+    withCancel(): CancelContext;
+    withCancel(cancelFunc: true): [CancelContext, CancelFunc];
+    withCancel(cancelFunc?: true): CancelContext | [CancelContext, CancelFunc] {
+        return withCancel(this, cancelFunc)
     }
-    withTimeout(ms: number): CancelContext {
-        return withTimeout(this, ms)
+    withTimeout(ms: number): CancelContext;
+    withTimeout(ms: number, cancelFunc: true): [CancelContext, CancelFunc];
+    withTimeout(ms: number, cancelFunc?: true): CancelContext | [CancelContext, CancelFunc] {
+        return withTimeout(this, ms, cancelFunc)
     }
-    withDeadline(d: Date): CancelContext {
-        return withDeadline(this, d)
+    withDeadline(d: Date): CancelContext;
+    withDeadline(d: Date, cancelFunc: true): [CancelContext, CancelFunc];
+    withDeadline(d: Date, cancelFunc?: true): CancelContext | [CancelContext, CancelFunc] {
+        return withDeadline(this, d, cancelFunc)
     }
     get isClosed(): boolean {
         return this.err !== undefined
@@ -213,9 +234,12 @@ class ValueCtx implements Context {
     }
 }
 
-function withCancel<T>(parent: Context): CancelContext {
+function withCancel<T>(parent: Context, cancelFunc?: true): CancelContext | [CancelContext, CancelFunc] {
     const ctx = new CancelCtx(parent)
     propagateCancel(parent, ctx)
+    if (cancelFunc) {
+        return [ctx, (reason) => ctx.cancel(reason)]
+    }
     return ctx
 }
 class cancelCtxKey { }
@@ -282,14 +306,20 @@ class CancelCtx implements CancelContext {
     withValue<T>(key: Constructor<T>, val: any): Context {
         return withValue(this, key, val)
     }
-    withCancel(): CancelContext {
-        return withCancel(this)
+    withCancel(): CancelContext;
+    withCancel(cancelFunc: true): [CancelContext, CancelFunc];
+    withCancel(cancelFunc?: true): CancelContext | [CancelContext, CancelFunc] {
+        return withCancel(this, cancelFunc)
     }
-    withTimeout(ms: number): CancelContext {
-        return withTimeout(this, ms)
+    withTimeout(ms: number): CancelContext;
+    withTimeout(ms: number, cancelFunc: true): [CancelContext, CancelFunc];
+    withTimeout(ms: number, cancelFunc?: true): CancelContext | [CancelContext, CancelFunc] {
+        return withTimeout(this, ms, cancelFunc)
     }
-    withDeadline(d: Date): CancelContext {
-        return withDeadline(this, d)
+    withDeadline(d: Date): CancelContext;
+    withDeadline(d: Date, cancelFunc: true): [CancelContext, CancelFunc];
+    withDeadline(d: Date, cancelFunc?: true): CancelContext | [CancelContext, CancelFunc] {
+        return withDeadline(this, d, cancelFunc)
     }
     get isClosed(): boolean {
         return this.err !== undefined
@@ -394,24 +424,27 @@ function removeChild(parent: Context, child: canceler) {
     p.children_?.delete(child)
 }
 
-function withDeadline(parent: Context, d: Date): CancelContext {
+function withDeadline(parent: Context, d: Date, cancelFunc?: true): CancelContext | [CancelContext, CancelFunc] {
     const cur = parent.deadline
     if (cur && cur.getTime() < d.getTime()) {
-        return withCancel(parent)
+        return withCancel(parent, cancelFunc)
     }
     const c = new TimerCtx(parent, d)
     propagateCancel(parent, c)
     const dur = d.getTime() - Date.now()
     if (dur <= 0) {
-        c._cancel(true, errDeadlineExceeded) // deadline has already passed
-        return c
+        c._cancel(true, new DeadlineExceeded()) // deadline has already passed
+    } else {
+        c._serve(dur)
     }
-    c._serve(dur)
+    if (cancelFunc) {
+        return [c, (resaon) => c.cancel(resaon)]
+    }
     return c
 }
 
-function withTimeout(parent: Context, ms: number): CancelContext {
-    return withDeadline(parent, new Date(Date.now() + ms))
+function withTimeout(parent: Context, ms: number, cancelFunc?: true): CancelContext | [CancelContext, CancelFunc] {
+    return withDeadline(parent, new Date(Date.now() + ms), cancelFunc)
 }
 class TimerCtx extends CancelCtx implements CancelContext {
     private t_: undefined | number
@@ -420,7 +453,7 @@ class TimerCtx extends CancelCtx implements CancelContext {
     }
     _serve(ms: number) {
         this.t_ = setTimeout(() => {
-            this._cancel(true, errDeadlineExceeded)
+            this._cancel(true, new DeadlineExceeded())
         }, ms)
     }
     get deadline(): Date | undefined {
