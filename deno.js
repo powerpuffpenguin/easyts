@@ -41,7 +41,6 @@ async function main() {
     await copyFile(`${dst}/channel_bench_test.ts`, `${__dirname}/src/channel_bench_test.ts`)
 
     await copyFile(`${dst}/README.md`, `${__dirname}/README.md`)
-    await copyFile(`${dst}/README.zh.md`, `${__dirname}/README.zh.md`)
     await copyFile(`${dst}/LICENSE`, `${__dirname}/LICENSE`)
 }
 main()

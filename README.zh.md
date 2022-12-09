@@ -242,7 +242,7 @@ main()
 ## bench
 
 下面是一個生成消費模型下的效能測試(消費者固定爲 200 個)
-[code](https://github.com/powerpuffpenguin/easyts/blob/main/src/core/channel_bench_test.ts)
+[code](https://github.com/powerpuffpenguin/easyts/blob/main/src/channel_bench_test.ts)
 
 | easyts on node-v14.15.3 es2022 | easyts on deno-1.28.3 | golang 1.18 GOMAXPROCS(12) | golang 1.18 GOMAXPROCS(1) | producer count | producer write | total write |
 | ------------------------------ | --------------------- | -------------------------- | ------------------------- | -------------- | -------------- | ----------- |
