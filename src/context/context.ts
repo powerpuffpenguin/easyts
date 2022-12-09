@@ -187,7 +187,11 @@ class ValueCtx implements Context {
                 value: this.val,
             }
         }
-        return value(this.parent, key)
+        const [val, ok] = value(this.parent, key)
+        return {
+            done: !ok,
+            value: val,
+        }
     }
     toString(): string {
         return `${this.parent}.WithValue(type ${this.key.name}, val ${this.val})`
@@ -298,7 +302,11 @@ class CancelCtx implements CancelContext {
                 value: this,
             }
         }
-        return value(this.parent, key)
+        const [val, ok] = value(this.parent, key)
+        return {
+            done: !ok,
+            value: val,
+        }
     }
     toString(): string {
         return `${this.parent}.WithCancel`
@@ -344,26 +352,23 @@ class CancelCtx implements CancelContext {
         })
     }
 }
-function value<T>(c: Context, key: Constructor<T>): IteratorResult<any> {
+function value<T>(c: Context, key: Constructor<any>): [undefined, false] | [T, true] {
     while (true) {
         if (c instanceof ValueCtx) {
             if (c.key === key) {
-                return {
-                    value: c.val,
-                }
+                return [c.val, true]
             }
             c = c.parent
         } else if (c instanceof CancelCtx) { // TimerCtx 
             if (cancelCtxKey === key) {
-                return {
-                    value: c,
-                }
+                return [c as T, true]
             }
             c = c.parent
         } else if (c instanceof EmptyCtx) {
-            return noResult
+            return [undefined, false]
         } else {
-            return c.get(key)
+            const val = c.get(key)
+            return [val.value, !val.done]
         }
     }
 }
