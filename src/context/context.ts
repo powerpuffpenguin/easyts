@@ -51,12 +51,16 @@ export interface Context {
      */
     sleep(ms: number): Promise<boolean>
     /**
-     * get() returns the value associated with this context for key or {done:true} if no value is associated with key. Successive calls to get() with  the same key returns the same result.
+     * get() returns the value associated with this context for key or undefined if no value is associated with key. Successive calls to get() with  the same key returns the same result.
      */
-    get<T>(key: Constructor<T>): IteratorResult<any>
+    get<T>(key: Constructor<any>): T | undefined
     /**
-     * returns a copy of parent in which the value associated with key is val.
+     * get() returns the [value,true] associated with this context for key or [undefined, false] if no value is associated with key. Successive calls to get() with  the same key returns the same result.
      */
+    getRaw<T>(key: Constructor<any>): [undefined, false] | [T, true]
+    /**
+    * returns a copy of parent in which the value associated with key is val.
+    */
     withValue<T>(key: Constructor<T>, val: any): Context
     /**
      * returns a copy of this with a new Done channel. The returned context's Done channel is closed when the returned copy cancel function is called or when the parent context's Done channel is closed, whichever happens first.
@@ -103,8 +107,11 @@ class EmptyCtx implements Context {
     get err(): Exception | undefined {
         return undefined
     }
-    get<T>(key: Constructor<T>): IteratorResult<any> {
-        return noResult
+    get(_: Constructor<any>) {
+        return undefined
+    }
+    getRaw(key: Constructor<any>): [undefined, false] {
+        return [undefined, false]
     }
     toString(): string {
         if (this == EmptyCtx.background) {
@@ -181,17 +188,18 @@ class ValueCtx implements Context {
     get err(): Exception | undefined {
         return this.parent.err
     }
-    get<T>(key: Constructor<T>): IteratorResult<any> {
+    get<T>(key: Constructor<any>): T | undefined {
         if (this.key === key) {
-            return {
-                value: this.val,
-            }
+            return this.val
         }
-        const [val, ok] = value(this.parent, key)
-        return {
-            done: !ok,
-            value: val,
+        const val = value<T>(this.parent, key)
+        return val[0]
+    }
+    getRaw<T>(key: Constructor<any>): [undefined, false] | [T, true] {
+        if (this.key === key) {
+            return [this.val, true]
         }
+        return value<T>(this.parent, key)
     }
     toString(): string {
         return `${this.parent}.WithValue(type ${this.key.name}, val ${this.val})`
@@ -296,17 +304,19 @@ class CancelCtx implements CancelContext {
     get err(): Exception | undefined {
         return this.err_
     }
-    get<T>(key: Constructor<T>): IteratorResult<any> {
+    get<T>(key: Constructor<any>, exists?: true): T | undefined {
         if (cancelCtxKey === key) {
-            return {
-                value: this,
-            }
+            return exists ? [this as any, true] : this as any
         }
-        const [val, ok] = value(this.parent, key)
-        return {
-            done: !ok,
-            value: val,
+        const val = value<T>(this.parent, key)
+        return val[0]
+    }
+    getRaw<T>(key: Constructor<any>): [undefined, false] | [T, true] {
+        if (cancelCtxKey === key) {
+            return [this as any, true]
         }
+        const val = value<T>(this.parent, key)
+        return val
     }
     toString(): string {
         return `${this.parent}.WithCancel`
@@ -367,8 +377,7 @@ function value<T>(c: Context, key: Constructor<any>): [undefined, false] | [T, t
         } else if (c instanceof EmptyCtx) {
             return [undefined, false]
         } else {
-            const val = c.get(key)
-            return [val.value, !val.done]
+            return c.getRaw<T>(key)
         }
     }
 }
@@ -411,11 +420,10 @@ function parentCancelCtx(parent: Context): CancelCtx | undefined {
     if (done == Chan.never || done.isClosed) {
         return
     }
-    const found = parent.get(cancelCtxKey)
-    if (found.done) {
+    const [p, ok] = parent.getRaw<CancelCtx>(cancelCtxKey)
+    if (!ok) {
         return
     }
-    const p = found.value as CancelCtx
     if (done !== p.done_) {
         return
     }
