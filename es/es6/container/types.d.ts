@@ -1,4 +1,5 @@
-import { ValueCallback, DeleteCallback, MapCallback, CloneCallback, CompareCallback, Comparable, ValidCallback } from "../core/types";
+import { ValueCallback, DeleteCallback, MapCallback, CloneCallback, CompareCallback, Comparable, ValidCallback } from "../types";
+import { ClassForEach } from "../internal/decorator";
 /**
  * container interface
  *
@@ -107,15 +108,9 @@ export interface Options<T> {
 /**
  * The base class of the container implements some common methods for the container
  */
-export declare class Basic<T> implements Iterable<T> {
+export declare class Basic<T> extends ClassForEach<T> {
     protected opts_: Options<T> | undefined;
     protected constructor(opts?: Options<T>);
-    /**
-     * Returns the current amount of data in the container
-     *
-     * @virtual
-     */
-    get length(): number;
     /**
      * Returns the current capacity of the container
      *
@@ -172,42 +167,4 @@ export declare class Basic<T> implements Iterable<T> {
      * @sealed
      */
     get reverse(): Iterable<T>;
-    /**
-     * call callback on each element in the container in turn
-     * @param callback
-     * @param reverse If true, traverse the container in reverse order
-     *
-     * @virtual
-     */
-    forEach(callback: ValueCallback<T>, reverse?: boolean): void;
-    /**
-     * Traverse the container looking for elements until the callback returns true, then stop looking
-     *
-     * @param callback Determine whether it is the element to be found
-     * @param reverse If true, traverse the container in reverse order
-     * @returns whether the element was found
-     *
-     * @virtual
-     */
-    find(callback: ValidCallback<T>, reverse?: boolean): boolean;
-    /**
-     * Convert container to array
-     * @param callback
-     * @param reverse If true, traverse the container in reverse order
-     *
-     * @virtual
-     */
-    map<TO>(callback: MapCallback<T, TO>, reverse?: boolean): Array<TO>;
-    /**
-     * Returns whether the data data exists in the container
-     *
-     * @virtual
-     */
-    has(data: T, reverse?: boolean, callback?: CompareCallback<T>): boolean;
-    /**
-     * Adds all the elements of an container into a string, separated by the specified separator string.
-     * @param separator
-     * @param separator A string used to separate one element of the container from the next in the resulting string. If omitted, the array elements are separated with a comma.
-     */
-    join(separator?: string | undefined): string;
 }

@@ -1,5 +1,3 @@
-import { Exception } from "../core/exception";
-export const errBadPattern = new Exception("syntax error in pattern");
 function scanChunk(pattern) {
     let star = false;
     while (pattern.length > 0 && pattern[0] == '*') {
@@ -34,18 +32,18 @@ function scanChunk(pattern) {
 // getEsc gets a possibly-escaped character from chunk, for a character class.
 function getEsc(chunk) {
     if (chunk.length == 0 || chunk[0] == '-' || chunk[0] == ']') {
-        throw errBadPattern;
+        throw new SyntaxError('syntax error in pattern');
     }
     if (chunk[0] == '\\') {
         chunk = chunk.substring(1);
         if (chunk.length == 0) {
-            throw errBadPattern;
+            throw new SyntaxError('syntax error in pattern');
         }
     }
     const r = chunk.charCodeAt(0);
     chunk = chunk.substring(1);
     if (chunk.length == 0) {
-        throw errBadPattern;
+        throw new SyntaxError('syntax error in pattern');
     }
     return [r, chunk];
 }
@@ -109,7 +107,7 @@ function matchChunk(chunk, s) {
             case '\\':
                 chunk = chunk.substring(1);
                 if (chunk.length == 0) {
-                    throw errBadPattern;
+                    throw new SyntaxError('syntax error in pattern');
                 }
             default:
                 if (!failed) {

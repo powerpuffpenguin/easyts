@@ -1,8 +1,9 @@
-import { noResult } from "../core/values";
-import { Exception, errOutOfRange } from "../core/exception";
+import { noResult } from "../values";
 import { Basic } from './types';
+import { defaultAssert } from "../assert";
 /**
  * A queue implemented using fixed-length arrays
+ * @sealed
  */
 export class Queue extends Basic {
     /**
@@ -42,24 +43,30 @@ export class Queue extends Basic {
     }
     /**
      * get queue element
-     * @throws {@link core.errOutOfRange}
+     * @throws {@link TypeError}
+     * @throws {@link RangeError}
      */
     get(i) {
+        defaultAssert.isUInt({
+            name: "i",
+            val: i,
+            max: this.size_,
+        });
         const a = this.a_;
-        if (i < 0 || i >= this.size_) {
-            throw Exception.wrap(errOutOfRange, `index out of range [${i}]`);
-        }
         return a[(this.offset_ + i) % a.length];
     }
     /**
      * set queue element
-     * @throws {@link core.errOutOfRange}
+     * @throws {@link TypeError}
+     * @throws {@link RangeError}
      */
     set(i, val) {
+        defaultAssert.isUInt({
+            name: "i",
+            val: i,
+            max: this.size_,
+        });
         const a = this.a_;
-        if (i < 0 || i >= this.size_) {
-            throw Exception.wrap(errOutOfRange, `index out of range [${i}]`);
-        }
         a[(this.offset_ + i) % a.length] = val;
     }
     /**
@@ -100,10 +107,18 @@ export class Queue extends Basic {
      * @returns deleted data
      */
     popFront(callback) {
+        return this.popFrontRaw(callback)[0];
+    }
+    /**
+     * If the queue is not empty delete the element at the front
+     * @param callback call the callback on the removed element
+     * @returns deleted data
+     */
+    popFrontRaw(callback) {
         var _a;
         const size = this.size_;
         if (size == 0) {
-            return noResult;
+            return [undefined, false];
         }
         const a = this.a_;
         const val = a[this.offset_++];
@@ -115,9 +130,7 @@ export class Queue extends Basic {
         if (callback) {
             callback(val);
         }
-        return {
-            value: val,
-        };
+        return [val, true];
     }
     /**
      * If the queue is not empty delete the element at the back
@@ -125,9 +138,17 @@ export class Queue extends Basic {
      * @returns deleted data
      */
     popBack(callback) {
+        return this.popBackRaw(callback)[0];
+    }
+    /**
+     * If the queue is not empty delete the element at the back
+     * @param callback call the callback on the removed element
+     * @returns deleted data
+     */
+    popBackRaw(callback) {
         const size = this.size_;
         if (size == 0) {
-            return noResult;
+            return [undefined, false];
         }
         const a = this.a_;
         const val = a[(this.offset_ + size - 1) % a.length];
@@ -135,9 +156,7 @@ export class Queue extends Basic {
         if (callback) {
             callback(val);
         }
-        return {
-            value: val,
-        };
+        return [val, true];
     }
     /**
      * clear the queue

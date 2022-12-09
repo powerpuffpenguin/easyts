@@ -1,3 +1,4 @@
+import { notImplement } from "./internal/decorator";
 /**
  * Create a Promise with a completion marker
  *
@@ -78,6 +79,53 @@ export class Completer {
         if (this.reject_) {
             this.reject_(reason);
         }
+    }
+}
+/**
+ * an asynchronous asset
+ */
+export class Asset {
+    constructor() {
+        this.ok_ = false;
+    }
+    static make(callback) {
+        return new _Asset(callback);
+    }
+    get asset() {
+        if (this.ok_) {
+            return this.asset_;
+        }
+        return (async () => {
+            let done = this.done_;
+            if (done) {
+                return done.promise;
+            }
+            done = new Completer();
+            try {
+                const val = await this._load();
+                this.ok_ = true;
+                this.asset_ = val;
+                done.resolve(val);
+            }
+            catch (e) {
+                this.done_ = undefined;
+                done.reject(e);
+            }
+            return done.promise;
+        })();
+    }
+    _load() {
+        throw new EvalError(notImplement(this.constructor.name, 'protected _load(): Promise<T>'));
+    }
+}
+class _Asset extends Asset {
+    constructor(callback) {
+        super();
+        this.callback = callback;
+    }
+    _load() {
+        const callback = this.callback;
+        return callback();
     }
 }
 //# sourceMappingURL=async.js.map

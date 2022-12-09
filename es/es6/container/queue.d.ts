@@ -1,7 +1,8 @@
 import { Basic, Options } from './types';
-import { CloneCallback, DeleteCallback } from "../core/types";
+import { CloneCallback, DeleteCallback, ReturnValue, ReturnValueRaw } from "../types";
 /**
  * A queue implemented using fixed-length arrays
+ * @sealed
  */
 export declare class Queue<T> extends Basic<T> {
     /**
@@ -31,12 +32,14 @@ export declare class Queue<T> extends Basic<T> {
     get capacity(): number;
     /**
      * get queue element
-     * @throws {@link core.errOutOfRange}
+     * @throws {@link TypeError}
+     * @throws {@link RangeError}
      */
     get(i: number): T;
     /**
      * set queue element
-     * @throws {@link core.errOutOfRange}
+     * @throws {@link TypeError}
+     * @throws {@link RangeError}
      */
     set(i: number, val: T): void;
     /**
@@ -54,13 +57,25 @@ export declare class Queue<T> extends Basic<T> {
      * @param callback call the callback on the removed element
      * @returns deleted data
      */
-    popFront(callback?: DeleteCallback<T>): IteratorResult<T>;
+    popFront(callback?: DeleteCallback<T>): ReturnValue<T>;
+    /**
+     * If the queue is not empty delete the element at the front
+     * @param callback call the callback on the removed element
+     * @returns deleted data
+     */
+    popFrontRaw(callback?: DeleteCallback<T>): ReturnValueRaw<T>;
     /**
      * If the queue is not empty delete the element at the back
      * @param callback call the callback on the removed element
      * @returns deleted data
      */
-    popBack(callback?: DeleteCallback<T>): IteratorResult<T>;
+    popBack(callback?: DeleteCallback<T>): ReturnValue<T>;
+    /**
+     * If the queue is not empty delete the element at the back
+     * @param callback call the callback on the removed element
+     * @returns deleted data
+     */
+    popBackRaw(callback?: DeleteCallback<T>): ReturnValueRaw<T>;
     /**
      * clear the queue
      * @param callback call the callback on the removed element

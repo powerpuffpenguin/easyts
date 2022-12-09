@@ -40,17 +40,18 @@ export class Exception extends Error {
 /**
  * exception with error code
  */
-export class CodeException extends Error {
+export class CodeException extends Exception {
     /**
      * 
      * @param ec error code
      * @param message 
      * @param opts 
      */
-    constructor(public ec: number,
+    constructor(ec: number,
         message?: string,
         opts?: ErrorOptions,
     ) {
         super(message, opts)
+        this.ec = ec
     }
 }

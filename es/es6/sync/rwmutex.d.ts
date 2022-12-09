@@ -1,6 +1,4 @@
 import { Locker } from './mutex';
-import { Exception } from "../core/exception";
-export declare const errRWMutexRUnlock: Exception;
 export interface RWLocker extends Locker {
     tryReadLock(): boolean;
     readLock(): Promise<RWLocker> | undefined;

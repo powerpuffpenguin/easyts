@@ -7,10 +7,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-import { Completer } from '../core/completer';
-import { errMutexUnlock } from './mutex';
-import { Exception } from "../core/exception";
-export const errRWMutexRUnlock = new Exception('runlock of unrlocked rwmutex');
+import { Completer } from '../async';
+import { MutexException } from './mutex';
 /**
  * a reader/writer mutual exclusion lock.
  *
@@ -54,7 +52,7 @@ export class RWMutex {
     }
     unlock() {
         if (!this.w_) {
-            throw errMutexUnlock;
+            throw new MutexException('unlock of unlocked mutex');
         }
         this.w_ = false;
         const c = this.c_;
@@ -101,7 +99,7 @@ export class RWMutex {
     readUnlock() {
         switch (this.r_) {
             case 0:
-                throw errRWMutexRUnlock;
+                throw new MutexException('readUnlock of unrlocked rwmutex');
             case 1:
                 this.r_ = 0;
                 const c = this.c_;

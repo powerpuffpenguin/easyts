@@ -18,10 +18,8 @@ export class DeadlineExceeded extends Exception {
     }
 }
 
-/**
- * errDeadlineExceeded is the error returned by context.err() when the context's deadline passes.
- */
-export const errDeadlineExceeded = new DeadlineExceeded()
+export type CancelFunc = (reason?: any) => void
+
 /**
  * A Context carries a deadline, a cancellation signal, and other values across API boundaries.
  */
@@ -53,26 +51,41 @@ export interface Context {
      */
     sleep(ms: number): Promise<boolean>
     /**
-     * get() returns the value associated with this context for key or {done:true} if no value is associated with key. Successive calls to get() with  the same key returns the same result.
+     * get() returns the value associated with this context for key or undefined if no value is associated with key. Successive calls to get() with  the same key returns the same result.
      */
-    get<T>(key: Constructor<T>): IteratorResult<any>
+    get<T>(key: Constructor<any>): T | undefined
     /**
-     * returns a copy of parent in which the value associated with key is val.
+     * get() returns the [value,true] associated with this context for key or [undefined, false] if no value is associated with key. Successive calls to get() with  the same key returns the same result.
      */
+    getRaw<T>(key: Constructor<any>): [undefined, false] | [T, true]
+    /**
+    * returns a copy of parent in which the value associated with key is val.
+    */
     withValue<T>(key: Constructor<T>, val: any): Context
     /**
      * returns a copy of this with a new Done channel. The returned context's Done channel is closed when the returned copy cancel function is called or when the parent context's Done channel is closed, whichever happens first.
      */
     withCancel(): CancelContext
     /**
+    * returns a copy of this with a new Done channel. The returned context's Done channel is closed when the returned copy cancel function is called or when the parent context's Done channel is closed, whichever happens first.
+    */
+    withCancel(cancelFunc: true): [CancelContext, CancelFunc]
+    /**
      * returns withDeadline(now + millisecond).
      */
     withTimeout(ms: number): CancelContext
     /**
+     * returns withDeadline(now + millisecond).
+     */
+    withTimeout(ms: number, cancelFunc: true): [CancelContext, CancelFunc]
+    /**
      * returns a copy of the this context with the deadline adjusted  to be no later than d. If the this's deadline is already earlier than d, withDeadline(d) is semantically equivalent to this. The returned context's Done channel is closed when the deadline expires, when the returned cancel function is called, or when the this context's Done channel is closed, whichever happens first.
      */
     withDeadline(d: Date): CancelContext
-
+    /**
+    * returns a copy of the this context with the deadline adjusted  to be no later than d. If the this's deadline is already earlier than d, withDeadline(d) is semantically equivalent to this. The returned context's Done channel is closed when the deadline expires, when the returned cancel function is called, or when the this context's Done channel is closed, whichever happens first.
+    */
+    withDeadline(d: Date, cancelFunc: true): [CancelContext, CancelFunc]
 }
 
 export interface CancelContext extends Context {
@@ -94,8 +107,11 @@ class EmptyCtx implements Context {
     get err(): Exception | undefined {
         return undefined
     }
-    get<T>(key: Constructor<T>): IteratorResult<any> {
-        return noResult
+    get(_: Constructor<any>) {
+        return undefined
+    }
+    getRaw(key: Constructor<any>): [undefined, false] {
+        return [undefined, false]
     }
     toString(): string {
         if (this == EmptyCtx.background) {
@@ -108,14 +124,20 @@ class EmptyCtx implements Context {
     withValue<T>(key: Constructor<T>, val: any): Context {
         return withValue(this, key, val)
     }
-    withCancel(): CancelContext {
-        return withCancel(this)
+    withCancel(): CancelContext;
+    withCancel(cancelFunc: true): [CancelContext, CancelFunc];
+    withCancel(cancelFunc?: true): CancelContext | [CancelContext, CancelFunc] {
+        return withCancel(this, cancelFunc)
     }
-    withTimeout(ms: number): CancelContext {
-        return withTimeout(this, ms)
+    withTimeout(ms: number): CancelContext;
+    withTimeout(ms: number, cancelFunc: true): [CancelContext, CancelFunc];
+    withTimeout(ms: number, cancelFunc?: true): CancelContext | [CancelContext, CancelFunc] {
+        return withTimeout(this, ms, cancelFunc)
     }
-    withDeadline(d: Date): CancelContext {
-        return withDeadline(this, d)
+    withDeadline(d: Date): CancelContext;
+    withDeadline(d: Date, cancelFunc: true): [CancelContext, CancelFunc];
+    withDeadline(d: Date, cancelFunc?: true): CancelContext | [CancelContext, CancelFunc] {
+        return withDeadline(this, d, cancelFunc)
     }
     get isClosed(): boolean {
         return this.err !== undefined
@@ -166,13 +188,18 @@ class ValueCtx implements Context {
     get err(): Exception | undefined {
         return this.parent.err
     }
-    get<T>(key: Constructor<T>): IteratorResult<any> {
+    get<T>(key: Constructor<any>): T | undefined {
         if (this.key === key) {
-            return {
-                value: this.val,
-            }
+            return this.val
         }
-        return value(this.parent, key)
+        const val = value<T>(this.parent, key)
+        return val[0]
+    }
+    getRaw<T>(key: Constructor<any>): [undefined, false] | [T, true] {
+        if (this.key === key) {
+            return [this.val, true]
+        }
+        return value<T>(this.parent, key)
     }
     toString(): string {
         return `${this.parent}.WithValue(type ${this.key.name}, val ${this.val})`
@@ -180,14 +207,20 @@ class ValueCtx implements Context {
     withValue<T>(key: Constructor<T>, val: any): Context {
         return withValue(this, key, val)
     }
-    withCancel(): CancelContext {
-        return withCancel(this)
+    withCancel(): CancelContext;
+    withCancel(cancelFunc: true): [CancelContext, CancelFunc];
+    withCancel(cancelFunc?: true): CancelContext | [CancelContext, CancelFunc] {
+        return withCancel(this, cancelFunc)
     }
-    withTimeout(ms: number): CancelContext {
-        return withTimeout(this, ms)
+    withTimeout(ms: number): CancelContext;
+    withTimeout(ms: number, cancelFunc: true): [CancelContext, CancelFunc];
+    withTimeout(ms: number, cancelFunc?: true): CancelContext | [CancelContext, CancelFunc] {
+        return withTimeout(this, ms, cancelFunc)
     }
-    withDeadline(d: Date): CancelContext {
-        return withDeadline(this, d)
+    withDeadline(d: Date): CancelContext;
+    withDeadline(d: Date, cancelFunc: true): [CancelContext, CancelFunc];
+    withDeadline(d: Date, cancelFunc?: true): CancelContext | [CancelContext, CancelFunc] {
+        return withDeadline(this, d, cancelFunc)
     }
     get isClosed(): boolean {
         return this.err !== undefined
@@ -213,9 +246,12 @@ class ValueCtx implements Context {
     }
 }
 
-function withCancel<T>(parent: Context): CancelContext {
+function withCancel<T>(parent: Context, cancelFunc?: true): CancelContext | [CancelContext, CancelFunc] {
     const ctx = new CancelCtx(parent)
     propagateCancel(parent, ctx)
+    if (cancelFunc) {
+        return [ctx, (reason) => ctx.cancel(reason)]
+    }
     return ctx
 }
 class cancelCtxKey { }
@@ -268,13 +304,19 @@ class CancelCtx implements CancelContext {
     get err(): Exception | undefined {
         return this.err_
     }
-    get<T>(key: Constructor<T>): IteratorResult<any> {
+    get<T>(key: Constructor<any>, exists?: true): T | undefined {
         if (cancelCtxKey === key) {
-            return {
-                value: this,
-            }
+            return exists ? [this as any, true] : this as any
         }
-        return value(this.parent, key)
+        const val = value<T>(this.parent, key)
+        return val[0]
+    }
+    getRaw<T>(key: Constructor<any>): [undefined, false] | [T, true] {
+        if (cancelCtxKey === key) {
+            return [this as any, true]
+        }
+        const val = value<T>(this.parent, key)
+        return val
     }
     toString(): string {
         return `${this.parent}.WithCancel`
@@ -282,14 +324,20 @@ class CancelCtx implements CancelContext {
     withValue<T>(key: Constructor<T>, val: any): Context {
         return withValue(this, key, val)
     }
-    withCancel(): CancelContext {
-        return withCancel(this)
+    withCancel(): CancelContext;
+    withCancel(cancelFunc: true): [CancelContext, CancelFunc];
+    withCancel(cancelFunc?: true): CancelContext | [CancelContext, CancelFunc] {
+        return withCancel(this, cancelFunc)
     }
-    withTimeout(ms: number): CancelContext {
-        return withTimeout(this, ms)
+    withTimeout(ms: number): CancelContext;
+    withTimeout(ms: number, cancelFunc: true): [CancelContext, CancelFunc];
+    withTimeout(ms: number, cancelFunc?: true): CancelContext | [CancelContext, CancelFunc] {
+        return withTimeout(this, ms, cancelFunc)
     }
-    withDeadline(d: Date): CancelContext {
-        return withDeadline(this, d)
+    withDeadline(d: Date): CancelContext;
+    withDeadline(d: Date, cancelFunc: true): [CancelContext, CancelFunc];
+    withDeadline(d: Date, cancelFunc?: true): CancelContext | [CancelContext, CancelFunc] {
+        return withDeadline(this, d, cancelFunc)
     }
     get isClosed(): boolean {
         return this.err !== undefined
@@ -314,26 +362,22 @@ class CancelCtx implements CancelContext {
         })
     }
 }
-function value<T>(c: Context, key: Constructor<T>): IteratorResult<any> {
+function value<T>(c: Context, key: Constructor<any>): [undefined, false] | [T, true] {
     while (true) {
         if (c instanceof ValueCtx) {
             if (c.key === key) {
-                return {
-                    value: c.val,
-                }
+                return [c.val, true]
             }
             c = c.parent
         } else if (c instanceof CancelCtx) { // TimerCtx 
             if (cancelCtxKey === key) {
-                return {
-                    value: c,
-                }
+                return [c as T, true]
             }
             c = c.parent
         } else if (c instanceof EmptyCtx) {
-            return noResult
+            return [undefined, false]
         } else {
-            return c.get(key)
+            return c.getRaw<T>(key)
         }
     }
 }
@@ -376,11 +420,10 @@ function parentCancelCtx(parent: Context): CancelCtx | undefined {
     if (done == Chan.never || done.isClosed) {
         return
     }
-    const found = parent.get(cancelCtxKey)
-    if (found.done) {
+    const [p, ok] = parent.getRaw<CancelCtx>(cancelCtxKey)
+    if (!ok) {
         return
     }
-    const p = found.value as CancelCtx
     if (done !== p.done_) {
         return
     }
@@ -394,24 +437,27 @@ function removeChild(parent: Context, child: canceler) {
     p.children_?.delete(child)
 }
 
-function withDeadline(parent: Context, d: Date): CancelContext {
+function withDeadline(parent: Context, d: Date, cancelFunc?: true): CancelContext | [CancelContext, CancelFunc] {
     const cur = parent.deadline
     if (cur && cur.getTime() < d.getTime()) {
-        return withCancel(parent)
+        return withCancel(parent, cancelFunc)
     }
     const c = new TimerCtx(parent, d)
     propagateCancel(parent, c)
     const dur = d.getTime() - Date.now()
     if (dur <= 0) {
-        c._cancel(true, errDeadlineExceeded) // deadline has already passed
-        return c
+        c._cancel(true, new DeadlineExceeded()) // deadline has already passed
+    } else {
+        c._serve(dur)
     }
-    c._serve(dur)
+    if (cancelFunc) {
+        return [c, (resaon) => c.cancel(resaon)]
+    }
     return c
 }
 
-function withTimeout(parent: Context, ms: number): CancelContext {
-    return withDeadline(parent, new Date(Date.now() + ms))
+function withTimeout(parent: Context, ms: number, cancelFunc?: true): CancelContext | [CancelContext, CancelFunc] {
+    return withDeadline(parent, new Date(Date.now() + ms), cancelFunc)
 }
 class TimerCtx extends CancelCtx implements CancelContext {
     private t_: undefined | number
@@ -420,7 +466,7 @@ class TimerCtx extends CancelCtx implements CancelContext {
     }
     _serve(ms: number) {
         this.t_ = setTimeout(() => {
-            this._cancel(true, errDeadlineExceeded)
+            this._cancel(true, new DeadlineExceeded())
         }, ms)
     }
     get deadline(): Date | undefined {

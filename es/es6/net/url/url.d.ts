@@ -1,20 +1,16 @@
-import { Exception } from "../../core";
-import { CompareCallback } from "../../core/types";
+import { Exception } from "../../exception";
+import { CompareCallback } from "../../types";
 export declare class InvalidHostException extends Exception {
-    private constructor();
+    constructor(message: string, opts?: ErrorOptions);
 }
 export declare class EscapeException extends Exception {
-    private constructor();
+    constructor(message: string, opts?: ErrorOptions);
 }
 export declare class URLException extends Exception {
     op: string;
     url: string;
     err: any;
     constructor(op: string, url: string, err: any);
-    unwrap(): undefined | Exception;
-    error(): string;
-    timeout(): boolean;
-    temporary(): boolean;
 }
 /**
  * escapes the string so it can be safely placed inside a URL query.
@@ -50,11 +46,14 @@ export interface ValuesObject {
 export declare class Values {
     /**
      * parses the URL-encoded query string and returns a map listing the values specified for each key.
-     * @param errs set errors encountered to this array
-     * @param first If true then errs will only log the first error encountered
      * @returns always returns a map containing all the valid query parameters found
      */
-    static parse(query: string, errs?: Array<Exception>, first?: boolean): Values;
+    static parse(query: string): Values;
+    /**
+     * parses the URL-encoded query string and returns a map listing the values specified for each key.
+     * @returns always returns a map containing all the valid query parameters found
+     */
+    static parseRaw(query: string): [Values, Array<Exception>];
     /**
      * convert Object to Values
      */
@@ -129,7 +128,7 @@ export declare class URL {
      * The url may be relative (a path, without a host) or absolute (starting with a scheme). Trying to parse a hostname and path without a scheme is invalid but may not necessarily return an error, due to parsing ambiguities.
      *
      * @throws {@link URLException}
-     * @throws {@link core.Exception}
+     * @throws {@link Exception}
      */
     static parse(rawURL: string): URL;
     /**
@@ -141,7 +140,7 @@ export declare class URL {
      * (Web browsers strip #fragment before sending the URL to a web server.)
      *
      * @throws {@link URLException}
-     * @throws {@link core.Exception}
+     * @throws {@link Exception}
      */
     static parseRequestURI(rawURL: string): URL;
     private static _parse;
@@ -206,11 +205,14 @@ export declare class URL {
     get isAbs(): boolean;
     /**
      * parses rawQuery and returns the corresponding values.
-     * @param errs set errors encountered to this array
-     * @param first If true then errs will only log the first error encountered
      * @returns always returns a map containing all the valid query parameters found
      */
-    query(errs?: Array<Exception>, first?: boolean): Values;
+    query(): Values;
+    /**
+     * parses rawQuery and returns the corresponding values.
+     * @returns always returns a map containing all the valid query parameters found
+     */
+    queryRaws(): [Values, Array<Exception>];
     /**
      * returns the encoded path?query or opaque?query string
      */

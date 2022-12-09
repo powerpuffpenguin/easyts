@@ -1,5 +1,5 @@
-import { assertInt, assertUInt } from "../assert";
-import { Exception } from "../core/exception";
+import { defaultAssert } from "../assert";
+import { Exception } from "../exception";
 export class AddrError extends Exception {
     constructor(addr, err) {
         super(addr == '' ? err : `address ${addr}: ${err}`);
@@ -258,7 +258,7 @@ export class IPMask {
      * returns the IP mask (in 4-byte form) of the IPv4 mask a.b.c.d.
      */
     static v4(a, b, c, d) {
-        assertUInt({
+        defaultAssert.isUInt({
             val: a,
             name: 'a',
             max: 255,
@@ -281,7 +281,7 @@ export class IPMask {
      * returns an IPMask consisting of 'ones' 1 bits followed by 0s up to a total length of 'bits' bits.
      */
     static cidr(ones, bits) {
-        assertInt({
+        defaultAssert.isInt({
             val: ones,
             name: "ones",
         }, {
@@ -348,7 +348,7 @@ export class IP {
      * returns the IP address (in 16-byte form) of the IPv4 address a.b.c.d.
      */
     static v4(a, b, c, d) {
-        assertUInt({
+        defaultAssert.isUInt({
             val: a,
             name: 'a',
             max: 255,

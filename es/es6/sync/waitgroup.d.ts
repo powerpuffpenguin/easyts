@@ -1,4 +1,4 @@
-import { VoidCallback } from '../core/types';
+import { VoidCallback } from '../types';
 /**
  * A WaitGroup waits for a collection of async process to finish.
  *
@@ -20,20 +20,20 @@ export declare class WaitGroup {
     /**
      * If WaitGroup counter is zero return undefined, else return a Promise for waiting until the counter is zero.
      */
-    wait(): Promise<void> | undefined;
+    wait(): Promise<undefined> | undefined;
     /**
      * Add adds delta, which may be negative, to the WaitGroup counter.
      * If the counter becomes zero, all goroutines blocked on Wait are released.
      * If the counter goes negative, Add throws Exception.
      * @param delta WaitGroup.counter += delta
      *
-     * @throws {@link core.Exception}
+     * @throws {@link Exception}
      */
     add(delta: number): void;
     /**
      * Done decrements the WaitGroup counter by one.
      *
-     * @throws {@link core.Exception}
+     * @throws {@link Exception}
      */
     done(): void;
     /**

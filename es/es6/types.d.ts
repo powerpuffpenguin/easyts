@@ -4,6 +4,10 @@ export declare type Constructor<T> = new (...args: any[]) => T;
  */
 export declare type VoidCallback = () => void;
 /**
+* callback function with no arguments
+*/
+export declare type AsyncVoidCallback = () => Promise<void>;
+/**
  * callback function with one parameter
  */
 export declare type ValueCallback<T> = (val: T) => void;
@@ -48,3 +52,5 @@ export declare class Pair<T0, T1> implements Comparable<Pair<T0, T1>>, Swappable
     compareTo(o: Pair<T0, T1>): number;
     swap(o: Pair<T0, T1>): void;
 }
+export declare type ReturnValue<T> = undefined | T;
+export declare type ReturnValueRaw<T> = [undefined, false] | [T, true];

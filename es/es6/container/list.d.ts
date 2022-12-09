@@ -1,4 +1,4 @@
-import { DeleteCallback, CloneCallback } from "../core/types";
+import { DeleteCallback, CloneCallback, ReturnValue, ReturnValueRaw } from "../types";
 import { Basic, Container, Options } from "./types";
 /**
  * linked list element
@@ -110,13 +110,25 @@ export declare class List<T> extends Basic<T> implements Container<T> {
      * @param callback call the callback on the removed element
      * @returns deleted data
      */
-    popBack(callback?: DeleteCallback<T>): IteratorResult<T>;
+    popBack(callback?: DeleteCallback<T>): ReturnValue<T>;
+    /**
+ * If the list is not empty delete the element at the back
+ * @param callback call the callback on the removed element
+ * @returns deleted data
+ */
+    popBackRaw(callback?: DeleteCallback<T>): ReturnValueRaw<T>;
     /**
      * If the list is not empty delete the element at the front
      * @param callback call the callback on the removed element
      * @returns deleted data
      */
-    popFront(callback?: DeleteCallback<T>): IteratorResult<T>;
+    popFront(callback?: DeleteCallback<T>): ReturnValue<T>;
+    /**
+     * If the list is not empty delete the element at the front
+     * @param callback call the callback on the removed element
+     * @returns deleted data
+     */
+    popFrontRaw(callback?: DeleteCallback<T>): ReturnValueRaw<T>;
     /**
      * inserts a new element e with value v at the back of list and returns e.
      */

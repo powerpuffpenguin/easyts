@@ -7,7 +7,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-import { neverPromise, noResult } from "../values";
+import { neverPromise } from "../values";
 import { Chan, selectChan } from "../channel";
 import { Exception } from "../exception";
 export class CanceleException extends Exception {
@@ -23,10 +23,6 @@ export class DeadlineExceeded extends Exception {
         this.temporary = true;
     }
 }
-/**
- * errDeadlineExceeded is the error returned by context.err() when the context's deadline passes.
- */
-export const errDeadlineExceeded = new DeadlineExceeded();
 class EmptyCtx {
     constructor() { }
     get deadline() {
@@ -38,8 +34,11 @@ class EmptyCtx {
     get err() {
         return undefined;
     }
-    get(key) {
-        return noResult;
+    get(_) {
+        return undefined;
+    }
+    getRaw(key) {
+        return [undefined, false];
     }
     toString() {
         if (this == EmptyCtx.background) {
@@ -53,14 +52,14 @@ class EmptyCtx {
     withValue(key, val) {
         return withValue(this, key, val);
     }
-    withCancel() {
-        return withCancel(this);
+    withCancel(cancelFunc) {
+        return withCancel(this, cancelFunc);
     }
-    withTimeout(ms) {
-        return withTimeout(this, ms);
+    withTimeout(ms, cancelFunc) {
+        return withTimeout(this, ms, cancelFunc);
     }
-    withDeadline(d) {
-        return withDeadline(this, d);
+    withDeadline(d, cancelFunc) {
+        return withDeadline(this, d, cancelFunc);
     }
     get isClosed() {
         return this.err !== undefined;
@@ -116,9 +115,14 @@ class ValueCtx {
     }
     get(key) {
         if (this.key === key) {
-            return {
-                value: this.val,
-            };
+            return this.val;
+        }
+        const val = value(this.parent, key);
+        return val[0];
+    }
+    getRaw(key) {
+        if (this.key === key) {
+            return [this.val, true];
         }
         return value(this.parent, key);
     }
@@ -128,14 +132,14 @@ class ValueCtx {
     withValue(key, val) {
         return withValue(this, key, val);
     }
-    withCancel() {
-        return withCancel(this);
+    withCancel(cancelFunc) {
+        return withCancel(this, cancelFunc);
     }
-    withTimeout(ms) {
-        return withTimeout(this, ms);
+    withTimeout(ms, cancelFunc) {
+        return withTimeout(this, ms, cancelFunc);
     }
-    withDeadline(d) {
-        return withDeadline(this, d);
+    withDeadline(d, cancelFunc) {
+        return withDeadline(this, d, cancelFunc);
     }
     get isClosed() {
         return this.err !== undefined;
@@ -159,9 +163,12 @@ class ValueCtx {
         });
     }
 }
-function withCancel(parent) {
+function withCancel(parent, cancelFunc) {
     const ctx = new CancelCtx(parent);
     propagateCancel(parent, ctx);
+    if (cancelFunc) {
+        return [ctx, (reason) => ctx.cancel(reason)];
+    }
     return ctx;
 }
 class cancelCtxKey {
@@ -210,13 +217,19 @@ class CancelCtx {
     get err() {
         return this.err_;
     }
-    get(key) {
+    get(key, exists) {
         if (cancelCtxKey === key) {
-            return {
-                value: this,
-            };
+            return exists ? [this, true] : this;
         }
-        return value(this.parent, key);
+        const val = value(this.parent, key);
+        return val[0];
+    }
+    getRaw(key) {
+        if (cancelCtxKey === key) {
+            return [this, true];
+        }
+        const val = value(this.parent, key);
+        return val;
     }
     toString() {
         return `${this.parent}.WithCancel`;
@@ -224,14 +237,14 @@ class CancelCtx {
     withValue(key, val) {
         return withValue(this, key, val);
     }
-    withCancel() {
-        return withCancel(this);
+    withCancel(cancelFunc) {
+        return withCancel(this, cancelFunc);
     }
-    withTimeout(ms) {
-        return withTimeout(this, ms);
+    withTimeout(ms, cancelFunc) {
+        return withTimeout(this, ms, cancelFunc);
     }
-    withDeadline(d) {
-        return withDeadline(this, d);
+    withDeadline(d, cancelFunc) {
+        return withDeadline(this, d, cancelFunc);
     }
     get isClosed() {
         return this.err !== undefined;
@@ -259,25 +272,21 @@ function value(c, key) {
     while (true) {
         if (c instanceof ValueCtx) {
             if (c.key === key) {
-                return {
-                    value: c.val,
-                };
+                return [c.val, true];
             }
             c = c.parent;
         }
         else if (c instanceof CancelCtx) { // TimerCtx 
             if (cancelCtxKey === key) {
-                return {
-                    value: c,
-                };
+                return [c, true];
             }
             c = c.parent;
         }
         else if (c instanceof EmptyCtx) {
-            return noResult;
+            return [undefined, false];
         }
         else {
-            return c.get(key);
+            return c.getRaw(key);
         }
     }
 }
@@ -322,11 +331,10 @@ function parentCancelCtx(parent) {
     if (done == Chan.never || done.isClosed) {
         return;
     }
-    const found = parent.get(cancelCtxKey);
-    if (found.done) {
+    const [p, ok] = parent.getRaw(cancelCtxKey);
+    if (!ok) {
         return;
     }
-    const p = found.value;
     if (done !== p.done_) {
         return;
     }
@@ -340,23 +348,27 @@ function removeChild(parent, child) {
     }
     (_a = p.children_) === null || _a === void 0 ? void 0 : _a.delete(child);
 }
-function withDeadline(parent, d) {
+function withDeadline(parent, d, cancelFunc) {
     const cur = parent.deadline;
     if (cur && cur.getTime() < d.getTime()) {
-        return withCancel(parent);
+        return withCancel(parent, cancelFunc);
     }
     const c = new TimerCtx(parent, d);
     propagateCancel(parent, c);
     const dur = d.getTime() - Date.now();
     if (dur <= 0) {
-        c._cancel(true, errDeadlineExceeded); // deadline has already passed
-        return c;
+        c._cancel(true, new DeadlineExceeded()); // deadline has already passed
     }
-    c._serve(dur);
+    else {
+        c._serve(dur);
+    }
+    if (cancelFunc) {
+        return [c, (resaon) => c.cancel(resaon)];
+    }
     return c;
 }
-function withTimeout(parent, ms) {
-    return withDeadline(parent, new Date(Date.now() + ms));
+function withTimeout(parent, ms, cancelFunc) {
+    return withDeadline(parent, new Date(Date.now() + ms), cancelFunc);
 }
 class TimerCtx extends CancelCtx {
     constructor(parent, deadline_) {
@@ -365,7 +377,7 @@ class TimerCtx extends CancelCtx {
     }
     _serve(ms) {
         this.t_ = setTimeout(() => {
-            this._cancel(true, errDeadlineExceeded);
+            this._cancel(true, new DeadlineExceeded());
         }, ms);
     }
     get deadline() {

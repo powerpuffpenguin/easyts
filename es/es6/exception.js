@@ -21,7 +21,7 @@ export class Exception extends Error {
 /**
  * exception with error code
  */
-export class CodeException extends Error {
+export class CodeException extends Exception {
     /**
      *
      * @param ec error code

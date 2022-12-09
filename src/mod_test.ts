@@ -9,6 +9,12 @@ import './container/queue_test'
 
 import './context/context_test'
 
+import './net/ip_test'
+import './net/url/url_test'
+
+import './path/match_test'
+import './path/path_test'
+
 import './sync/sync_test'
 
 import './time/time_test'

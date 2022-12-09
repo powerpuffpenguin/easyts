@@ -1,4 +1,4 @@
-import { Exception } from "../core/exception";
+import { Exception } from "../exception";
 export declare class AddrError extends Exception {
     readonly addr: string;
     readonly err: string;

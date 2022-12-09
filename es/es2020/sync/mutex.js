@@ -1,6 +1,7 @@
-import { Completer } from "../core/completer";
-import { Exception } from "../core/exception";
-export const errMutexUnlock = new Exception('unlock of unlocked mutex');
+import { Completer } from "../async";
+import { Exception } from "../exception";
+export class MutexException extends Exception {
+}
 /**
  * a mutual exclusion lock.
  */
@@ -42,9 +43,9 @@ export class Mutex {
      * unlocks
      *
      * @remarks
-     * if is not locked on entry to Unlock, throw {@link errMutexUnlock}
+     * if is not locked on entry to Unlock, throw {@link MutexException}
      *
-     * @throws {@link errMutexUnlock}
+     * @throws {@link MutexException}
      */
     unlock() {
         const c = this.c_;
@@ -53,7 +54,7 @@ export class Mutex {
             c.resolve();
         }
         else {
-            throw errMutexUnlock;
+            throw new MutexException('unlock of unlocked mutex');
         }
     }
 }

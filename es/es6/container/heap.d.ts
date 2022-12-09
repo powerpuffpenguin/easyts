@@ -1,4 +1,4 @@
-import { CompareCallback, DeleteCallback, CloneCallback } from "../core/types";
+import { CompareCallback, DeleteCallback, CloneCallback, ReturnValue, ReturnValueRaw } from "../types";
 import { Basic, Options, Container } from "./types";
 /**
  * Initialize array to heap
@@ -6,7 +6,8 @@ import { Basic, Options, Container } from "./types";
 export declare function heapify<T>(h: Array<T>, cf?: CompareCallback<T>): Array<T>;
 /**
  * Fix re-establishes the heap ordering after the element at index i has changed its value.
- * @throws {@link core.errOutOfRange}
+ * @throws {@link TypeError}
+ * @throws {@link RangeError}
  */
 export declare function fix<T>(h: Array<T>, i: number, cf?: CompareCallback<T>): void;
 /**
@@ -14,7 +15,8 @@ export declare function fix<T>(h: Array<T>, i: number, cf?: CompareCallback<T>):
  *
  * @throws {@link core.errOutOfRange}
  */
-export declare function pop<T>(h: Array<T>, cf?: CompareCallback<T>, rf?: DeleteCallback<T>): T;
+export declare function pop<T>(h: Array<T>, cf?: CompareCallback<T>, rf?: DeleteCallback<T>): ReturnValue<T>;
+export declare function popRaw<T>(h: Array<T>, cf?: CompareCallback<T>, rf?: DeleteCallback<T>): ReturnValueRaw<T>;
 /**
  * Push pushes the element x onto the heap.
  */
@@ -68,10 +70,13 @@ export declare class Heap<T> extends Basic<T> implements Container<T> {
      */
     push(...vals: Array<T>): void;
     /**
-     * Pop removes and returns the minimum element (according to cf or <) from the heap.
-     * @throws {@link core.errOutOfRange}
+     * Pop removes and returns the minimum element (according opts.compare cf or <) from the heap.
      */
-    pop(): T;
+    pop(): ReturnValue<T>;
+    /**
+     * Pop removes and returns the minimum element (according opts.compare cf or <) from the heap.
+     */
+    popRaw(): ReturnValueRaw<T>;
     /**
      * Remove removes and returns the element at index i from the heap.
      *

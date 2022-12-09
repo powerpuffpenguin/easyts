@@ -1,4 +1,4 @@
-import { Exception } from "../../core";
+import { Exception } from "../../exception";
 export class InvalidHostException extends Exception {
     /**
      *
@@ -7,8 +7,8 @@ export class InvalidHostException extends Exception {
     static make(str) {
         return new InvalidHostException(`invalid character ${str} in host name`);
     }
-    constructor(msg) {
-        super(msg);
+    constructor(message, opts) {
+        super(message, opts);
     }
 }
 export class EscapeException extends Exception {
@@ -19,28 +19,22 @@ export class EscapeException extends Exception {
     static make(str) {
         return new EscapeException(`invalid URL escape ${str}`);
     }
-    constructor(msg) {
-        super(msg);
+    constructor(message, opts) {
+        super(message, opts);
     }
 }
 export class URLException extends Exception {
     constructor(op, url, err) {
-        super('ParseError');
+        super(`${op} '${url}': ${err instanceof Error ? err.message : err}`, {
+            cause: err,
+        });
         this.op = op;
         this.url = url;
         this.err = err;
-    }
-    unwrap() {
-        return this.err;
-    }
-    error() {
-        return `${this.op} '${this.url}': ${this.err.error()}`;
-    }
-    timeout() {
-        return this.err.timeout();
-    }
-    temporary() {
-        return this.err.temporary();
+        if (err instanceof Exception) {
+            this.timeout = err.timeout;
+            this.temporary = err.temporary;
+        }
     }
 }
 /**
@@ -291,7 +285,7 @@ function unescape(s0, mode) {
                     if (s.length > 3) {
                         s = s.subarray(0, 3);
                     }
-                    throw EscapeException.make(new TextDecoder().decode(s));
+                    throw new EscapeException(`invalid URL escape ${new TextDecoder().decode(s)}`);
                 }
                 // Per https://tools.ietf.org/html/rfc3986#page-21
                 // in the host component %-encoding can only be used
@@ -303,7 +297,8 @@ function unescape(s0, mode) {
                     && unhex(s[i + 1]) < 8
                     && !bytesEqual(s.subarray(i, i + 3), [37, 50, 53]) // s[i: i + 3] != "%25"
                 ) {
-                    throw EscapeException.make(new TextDecoder().decode(s.subarray(i, i + 3)));
+                    const message = new TextDecoder().decode(s.subarray(i, i + 3));
+                    throw new EscapeException(message);
                 }
                 if (mode == Encode.Zone) {
                     // RFC 6874 says basically "anything goes" for zone identifiers
@@ -317,7 +312,8 @@ function unescape(s0, mode) {
                     if (!bytesEqual(s.subarray(i, i + 3), [37, 50, 53]) // s[i: i + 3] != "%25"
                         && v != 32 // v != ' '
                         && shouldEscape(v, Encode.Host)) {
-                        throw EscapeException.make(new TextDecoder().decode(s.subarray(i, i + 3)));
+                        const message = new TextDecoder().decode(s.subarray(i, i + 3));
+                        throw new EscapeException(message);
                     }
                 }
                 i += 3;
@@ -444,6 +440,44 @@ function stringsCut(s, sep) {
     }
     return [s, '', ""];
 }
+function parseValues(query, errs) {
+    const m = new Values(new Map());
+    let key;
+    let value;
+    while (query != "") {
+        [key, query] = stringsCut(query, '&');
+        if (key.indexOf(';') >= 0) {
+            if (errs) {
+                errs.push(new Exception('invalid semicolon separator in query'));
+            }
+            continue;
+        }
+        if (key == "") {
+            continue;
+        }
+        [key, value] = stringsCut(key, '=');
+        try {
+            key = queryUnescape(key);
+        }
+        catch (e) {
+            if (errs) {
+                errs.push(e);
+            }
+            continue;
+        }
+        try {
+            value = queryUnescape(value);
+        }
+        catch (e) {
+            if (errs) {
+                errs.push(e);
+            }
+            continue;
+        }
+        m.add(key, value);
+    }
+    return m;
+}
 /**
  * It is typically used for query parameters and form values.
  * the keys in a Values map are case-sensitive.
@@ -454,54 +488,19 @@ export class Values {
     }
     /**
      * parses the URL-encoded query string and returns a map listing the values specified for each key.
-     * @param errs set errors encountered to this array
-     * @param first If true then errs will only log the first error encountered
      * @returns always returns a map containing all the valid query parameters found
      */
-    static parse(query, errs, first = true) {
-        const m = new Values(new Map());
-        let key;
-        let value;
-        let n = errs?.length ?? 0;
-        while (query != "") {
-            [key, query] = stringsCut(query, '&');
-            if (key.indexOf(';') >= 0) {
-                if (errs) {
-                    if (!first || n == errs.length) {
-                        errs.push(new Exception('invalid semicolon separator in query'));
-                    }
-                }
-                continue;
-            }
-            if (key == "") {
-                continue;
-            }
-            [key, value] = stringsCut(key, '=');
-            try {
-                key = queryUnescape(key);
-            }
-            catch (e) {
-                if (errs) {
-                    if (!first || n == errs.length) {
-                        errs.push(e);
-                    }
-                }
-                continue;
-            }
-            try {
-                value = queryUnescape(value);
-            }
-            catch (e) {
-                if (errs) {
-                    if (!first || n == errs.length) {
-                        errs.push(e);
-                    }
-                }
-                continue;
-            }
-            m.add(key, value);
-        }
-        return m;
+    static parse(query) {
+        return parseValues(query);
+    }
+    /**
+     * parses the URL-encoded query string and returns a map listing the values specified for each key.
+     * @returns always returns a map containing all the valid query parameters found
+     */
+    static parseRaw(query) {
+        const errs = new Array();
+        const m = parseValues(query, errs);
+        return [m, errs];
     }
     /**
      * convert Object to Values
@@ -904,7 +903,7 @@ export class URL {
      * The url may be relative (a path, without a host) or absolute (starting with a scheme). Trying to parse a hostname and path without a scheme is invalid but may not necessarily return an error, due to parsing ambiguities.
      *
      * @throws {@link URLException}
-     * @throws {@link core.Exception}
+     * @throws {@link Exception}
      */
     static parse(rawURL) {
         // Cut off #frag
@@ -935,7 +934,7 @@ export class URL {
      * (Web browsers strip #fragment before sending the URL to a web server.)
      *
      * @throws {@link URLException}
-     * @throws {@link core.Exception}
+     * @throws {@link Exception}
      */
     static parseRequestURI(rawURL) {
         try {
@@ -1115,15 +1114,23 @@ export class URL {
     }
     /**
      * parses rawQuery and returns the corresponding values.
-     * @param errs set errors encountered to this array
-     * @param first If true then errs will only log the first error encountered
      * @returns always returns a map containing all the valid query parameters found
      */
-    query(errs, first = true) {
+    query() {
         if (this.rawQuery === '') {
             return new Values();
         }
-        return Values.parse(this.rawQuery, errs, first);
+        return Values.parse(this.rawQuery);
+    }
+    /**
+     * parses rawQuery and returns the corresponding values.
+     * @returns always returns a map containing all the valid query parameters found
+     */
+    queryRaws() {
+        if (this.rawQuery === '') {
+            return [new Values(), []];
+        }
+        return Values.parseRaw(this.rawQuery);
     }
     /**
      * returns the encoded path?query or opaque?query string

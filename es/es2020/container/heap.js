@@ -1,7 +1,7 @@
-import { noResult } from "../core/values";
-import { compare } from "../core/types";
+import { noResult } from "../values";
+import { compare } from "../types";
 import { Basic } from "./types";
-import { Exception, errOutOfRange } from "../core/exception";
+import { defaultAssert } from "../assert";
 function getIndex(i) {
     if (i < 1) {
         return 0;
@@ -52,12 +52,16 @@ function down(h, i0, n, cf) {
 }
 /**
  * Fix re-establishes the heap ordering after the element at index i has changed its value.
- * @throws {@link core.errOutOfRange}
+ * @throws {@link TypeError}
+ * @throws {@link RangeError}
  */
 export function fix(h, i, cf) {
-    if (i < 0 || i >= h.length) {
-        throw Exception.wrap(errOutOfRange, `index out of range [${i}]`);
-    }
+    defaultAssert.isUInt({
+        name: "i",
+        val: i,
+        max: h.length,
+        notMax: true,
+    });
     if (!down(h, i, h.length, cf)) {
         up(h, i, cf);
     }
@@ -70,7 +74,7 @@ export function fix(h, i, cf) {
 export function pop(h, cf, rf) {
     const n = h.length - 1;
     if (n < 0) {
-        throw Exception.wrap(errOutOfRange, `pop out of range`);
+        return;
     }
     else if (n != 0) {
         [h[0], h[n]] = [h[n], h[0]];
@@ -82,6 +86,22 @@ export function pop(h, cf, rf) {
         rf(v);
     }
     return v;
+}
+export function popRaw(h, cf, rf) {
+    const n = h.length - 1;
+    if (n < 0) {
+        return [undefined, false];
+    }
+    else if (n != 0) {
+        [h[0], h[n]] = [h[n], h[0]];
+    }
+    down(h, 0, n, cf);
+    const v = h[h.length - 1];
+    h.pop();
+    if (rf) {
+        rf(v);
+    }
+    return [v, true];
 }
 /**
  * Push pushes the element x onto the heap.
@@ -97,9 +117,12 @@ export function push(h, val, cf) {
  * @throws {@link core.errOutOfRange}
  */
 export function remove(h, i, cf, rf) {
-    if (i < 0 || i >= h.length) {
-        throw Exception.wrap(errOutOfRange, `index out of range [${i}]`);
-    }
+    defaultAssert.isUInt({
+        name: 'i',
+        val: i,
+        max: h.length,
+        notMax: true,
+    });
     let n = h.length - 1;
     if (n != i) {
         [h[i], h[n]] = [h[n], h[i]];
@@ -162,9 +185,12 @@ export class Heap extends Basic {
      */
     get(i) {
         const h = this.h_;
-        if (i < 0 || i >= h.length) {
-            throw Exception.wrap(errOutOfRange, `index out of range [${i}]`);
-        }
+        defaultAssert.isUInt({
+            name: "i",
+            val: i,
+            max: h.length,
+            notMax: true,
+        });
         return h[i];
     }
     /**
@@ -173,9 +199,12 @@ export class Heap extends Basic {
      */
     set(i, val) {
         const h = this.h_;
-        if (i < 0 || i >= h.length) {
-            throw Exception.wrap(errOutOfRange, `index out of range [${i}]`);
-        }
+        defaultAssert.isUInt({
+            name: "i",
+            val: i,
+            max: h.length,
+            notMax: true,
+        });
         const o = h[i];
         h[i] = val;
         const cf = this.opts_?.compare;
@@ -198,11 +227,16 @@ export class Heap extends Basic {
         }
     }
     /**
-     * Pop removes and returns the minimum element (according to cf or <) from the heap.
-     * @throws {@link core.errOutOfRange}
+     * Pop removes and returns the minimum element (according opts.compare cf or <) from the heap.
      */
     pop() {
         return pop(this.h_, this.opts_?.compare, this.opts_?.remove);
+    }
+    /**
+     * Pop removes and returns the minimum element (according opts.compare cf or <) from the heap.
+     */
+    popRaw() {
+        return popRaw(this.h_, this.opts_?.compare, this.opts_?.remove);
     }
     /**
      * Remove removes and returns the element at index i from the heap.

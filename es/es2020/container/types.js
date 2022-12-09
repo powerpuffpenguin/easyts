@@ -1,19 +1,14 @@
-import { Exception } from "../core/exception";
-import { compare } from "../core/types";
+import { Exception } from "../exception";
+import { compare } from "../types";
+import { classForEach, ClassForEach } from "../internal/decorator";
 /**
  * The base class of the container implements some common methods for the container
  */
-export class Basic {
+export class Basic extends ClassForEach {
     constructor(opts) {
+        super();
         this.opts_ = opts;
-    }
-    /**
-     * Returns the current amount of data in the container
-     *
-     * @virtual
-     */
-    get length() {
-        throw new Exception('function length not implemented');
+        classForEach(Basic);
     }
     /**
      * Returns the current capacity of the container
@@ -113,80 +108,6 @@ export class Basic {
                 return i;
             }
         };
-    }
-    /**
-     * call callback on each element in the container in turn
-     * @param callback
-     * @param reverse If true, traverse the container in reverse order
-     *
-     * @virtual
-     */
-    forEach(callback, reverse) {
-        const it = reverse ? this.reverse : this;
-        for (const v of it) {
-            callback(v);
-        }
-    }
-    /**
-     * Traverse the container looking for elements until the callback returns true, then stop looking
-     *
-     * @param callback Determine whether it is the element to be found
-     * @param reverse If true, traverse the container in reverse order
-     * @returns whether the element was found
-     *
-     * @virtual
-     */
-    find(callback, reverse) {
-        const it = reverse ? this.reverse : this;
-        for (const v of it) {
-            if (callback(v)) {
-                return true;
-            }
-        }
-        return false;
-    }
-    /**
-     * Convert container to array
-     * @param callback
-     * @param reverse If true, traverse the container in reverse order
-     *
-     * @virtual
-     */
-    map(callback, reverse) {
-        const length = this.length;
-        if (length == 0) {
-            return new Array();
-        }
-        const it = reverse ? this.reverse : this;
-        const result = new Array(length);
-        let i = 0;
-        for (const v of it) {
-            result[i++] = callback(v);
-        }
-        return result;
-    }
-    /**
-     * Returns whether the data data exists in the container
-     *
-     * @virtual
-     */
-    has(data, reverse, callback) {
-        callback = callback ?? this.opts_?.compare;
-        const it = reverse ? this.reverse : this;
-        for (const v of it) {
-            if (compare(data, v, callback) == 0) {
-                return true;
-            }
-        }
-        return false;
-    }
-    /**
-     * Adds all the elements of an container into a string, separated by the specified separator string.
-     * @param separator
-     * @param separator A string used to separate one element of the container from the next in the resulting string. If omitted, the array elements are separated with a comma.
-     */
-    join(separator) {
-        return this.map((v) => `${v}`).join(separator);
     }
 }
 //# sourceMappingURL=types.js.map

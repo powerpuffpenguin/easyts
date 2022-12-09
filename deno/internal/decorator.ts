@@ -5,20 +5,16 @@ export interface ForEach<T> {
     iterator(reverse?: boolean): Iterator<T>
     readonly length: number
 }
-function notImplement(c: string, f: string) {
+export function notImplement(c: string, f: string) {
     return `class "${c}" not implemented function "${f}"`
 }
 export class ClassForEach<T> implements ForEach<T> {
 
-    private __name__: string;
-    constructor() {
-        this.__name__ = new.target.name
-    }
     /**
      * @virtual
      */
     iterator(reverse?: boolean): Iterator<T> {
-        throw new EvalError(notImplement(this.__name__,
+        throw new EvalError(notImplement(this.constructor.name,
             "iterator(reverse?: boolean): Iterator<T>"
         ))
     }
@@ -26,7 +22,7 @@ export class ClassForEach<T> implements ForEach<T> {
      * @virtual
      */
     get length(): number {
-        throw new EvalError(notImplement(this.__name__,
+        throw new EvalError(notImplement(this.constructor.name,
             "get length(): number"
         ))
     }
@@ -38,7 +34,7 @@ export class ClassForEach<T> implements ForEach<T> {
      * @virtual
      */
     forEach(callback: ValueCallback<T>, reverse?: boolean): void {
-        throw new EvalError(notImplement(this.__name__,
+        throw new EvalError(notImplement(this.constructor.name,
             "forEach(callback: ValueCallback<T>, reverse?: boolean): void"
         ))
     }
@@ -52,7 +48,7 @@ export class ClassForEach<T> implements ForEach<T> {
      * @virtual
      */
     find(callback: ValidCallback<T>, reverse?: boolean): boolean {
-        throw new EvalError(notImplement(this.__name__,
+        throw new EvalError(notImplement(this.constructor.name,
             "find(callback: ValidCallback<T>, reverse?: boolean): boolean"
         ))
     }
@@ -62,7 +58,7 @@ export class ClassForEach<T> implements ForEach<T> {
      * @virtual
      */
     has(data: T, reverse?: boolean, callback?: CompareCallback<T>): boolean {
-        throw new EvalError(notImplement(this.__name__,
+        throw new EvalError(notImplement(this.constructor.name,
             "has(data: T, reverse?: boolean, callback?: CompareCallback<T>): boolean"
         ))
     }
@@ -74,7 +70,7 @@ export class ClassForEach<T> implements ForEach<T> {
      * @virtual
      */
     map<TO>(callback: MapCallback<T, TO>, reverse?: boolean): Array<TO> {
-        throw new EvalError(notImplement(this.__name__,
+        throw new EvalError(notImplement(this.constructor.name,
             "map<TO>(callback: MapCallback<T, TO>, reverse?: boolean): Array<TO>"
         ))
     }
@@ -85,7 +81,7 @@ export class ClassForEach<T> implements ForEach<T> {
      * @param reverse If true, traverse the container in reverse order
      */
     join<TO>(separator?: string, callback?: MapCallback<T, TO>, reverse?: boolean): string {
-        throw new EvalError(notImplement(this.__name__,
+        throw new EvalError(notImplement(this.constructor.name,
             "join<TO>(separator?: string, callback?: MapCallback<T, TO>, reverse?: boolean): string"
         ))
     }

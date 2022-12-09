@@ -1,4 +1,4 @@
-import { noResult } from "../core/values";
+import { noResult } from "../values";
 import { Basic } from "./types";
 /**
  * linked list element
@@ -237,9 +237,26 @@ export class List extends Basic {
             if (callback) {
                 callback(e.data);
             }
-            return { value: e.data };
+            return e.data;
         }
-        return noResult;
+    }
+    /**
+ * If the list is not empty delete the element at the back
+ * @param callback call the callback on the removed element
+ * @returns deleted data
+ */
+    popBackRaw(callback) {
+        var _a;
+        const e = this.back();
+        if (e) {
+            this._remove(e);
+            callback = callback !== null && callback !== void 0 ? callback : (_a = this.opts_) === null || _a === void 0 ? void 0 : _a.remove;
+            if (callback) {
+                callback(e.data);
+            }
+            return [e.data, true];
+        }
+        return [undefined, false];
     }
     /**
      * If the list is not empty delete the element at the front
@@ -255,9 +272,26 @@ export class List extends Basic {
             if (callback) {
                 callback(e.data);
             }
-            return { value: e.data };
+            return e.data;
         }
-        return noResult;
+    }
+    /**
+     * If the list is not empty delete the element at the front
+     * @param callback call the callback on the removed element
+     * @returns deleted data
+     */
+    popFrontRaw(callback) {
+        var _a;
+        const e = this.front();
+        if (e) {
+            this._remove(e);
+            callback = callback !== null && callback !== void 0 ? callback : (_a = this.opts_) === null || _a === void 0 ? void 0 : _a.remove;
+            if (callback) {
+                callback(e.data);
+            }
+            return [e.data, true];
+        }
+        return [undefined, false];
     }
     /**
      * inserts a new element e with value v at the back of list and returns e.

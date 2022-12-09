@@ -1,5 +1,3 @@
-import { Exception } from "../core/exception";
-export declare const errBadPattern: Exception;
 /**
  * reports whether name matches the shell pattern.
  * @remarks

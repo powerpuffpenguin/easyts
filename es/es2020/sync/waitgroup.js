@@ -1,5 +1,5 @@
-import { Completer } from '../core/completer';
-import { Exception } from "../core/exception";
+import { Completer } from '../async';
+import { Exception } from "../exception";
 /**
  * A WaitGroup waits for a collection of async process to finish.
  *
@@ -23,7 +23,7 @@ export class WaitGroup {
      */
     wait() {
         if (this.counter_ == 0) {
-            return undefined;
+            return;
         }
         let c = this.c_;
         if (c) {
@@ -39,14 +39,14 @@ export class WaitGroup {
      * If the counter goes negative, Add throws Exception.
      * @param delta WaitGroup.counter += delta
      *
-     * @throws {@link core.Exception}
+     * @throws {@link Exception}
      */
     add(delta) {
         if (delta === 0) {
             return;
         }
         let v = Math.floor(delta);
-        if (!isFinite(v) || v != delta) {
+        if (!Number.isSafeInteger(v)) {
             throw new Exception(`delta must be a integer: ${delta}`);
         }
         v += this.counter_;
@@ -71,7 +71,7 @@ export class WaitGroup {
     /**
      * Done decrements the WaitGroup counter by one.
      *
-     * @throws {@link core.Exception}
+     * @throws {@link Exception}
      */
     done() {
         this.add(-1);
