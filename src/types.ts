@@ -74,3 +74,6 @@ export class Pair<T0, T1> implements Comparable<Pair<T0, T1>>, Swappable<Pair<T0
         [this.c0_, this.c1_, this.first, this.second] = [o.c0_, o.c1_, o.first, o.second]
     }
 }
+
+export type ReturnValue<T> = undefined | T
+export type ReturnValueRaw<T> = [undefined, false] | [T, true]

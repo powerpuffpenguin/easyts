@@ -23,8 +23,7 @@ export declare class Exception extends Error {
 /**
  * exception with error code
  */
-export declare class CodeException extends Error {
-    ec: number;
+export declare class CodeException extends Exception {
     /**
      *
      * @param ec error code

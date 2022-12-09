@@ -48,3 +48,5 @@ export declare class Pair<T0, T1> implements Comparable<Pair<T0, T1>>, Swappable
     compareTo(o: Pair<T0, T1>): number;
     swap(o: Pair<T0, T1>): void;
 }
+export declare type ReturnValue<T> = undefined | T;
+export declare type ReturnValueRaw<T> = [undefined, false] | [T, true];
