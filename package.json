@@ -1,6 +1,6 @@
 {
   "name": "@king011/easyts",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "js library written with ts",
   "scripts": {
     "deno":"node deno.js",
