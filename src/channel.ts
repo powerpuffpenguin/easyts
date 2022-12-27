@@ -513,12 +513,62 @@ function shuffle(arrs: Array<any>, c: number) {
     return arrs
 }
 
+class Values<T> {
+    readonly vals = new Array<T>()
+    private keys = new Map<T, number>()
+    get length(): number {
+        return this.vals.length
+    }
+    pop() {
+        const val = this.vals.pop()!
+        this.keys.delete(val)
+        return val
+    }
+    removeBy(i: number): T {
+        const vals = this.vals
+        const swap = vals.pop()!
+        const keys = this.keys
+        if (i == vals.length) {
+            keys.delete(swap)
+            return swap
+        }
+        const val = vals[i]
+        keys.delete(val)
+        vals[i] = swap
+        keys.set(swap, i)
+        return val
+    }
+    remove(val: T) {
+        const keys = this.keys
+        const vals = this.vals
+        const i = keys.get(val) ?? -1
+        if (i < 0) {
+            return
+        }
+        const swap = vals.pop()!
+        keys.delete(val)
+        if (i == vals.length) {
+            return
+        }
+        vals[i] = swap
+        keys.set(swap, i)
+    }
+    clear() {
+        this.vals.splice(0)
+        this.keys.clear()
+    }
+    push(val: T) {
+        const vals = this.vals
+        const value = vals.length
+        vals.push(val)
+        this.keys.set(val, value)
+    }
 
+}
 type ReadCallback = (val: IteratorResult<any>) => void
-
 class Reader {
     private closed_ = false
-    private vals = new Array<ReadValue>()
+    private vals = new Values<ReadValue>()
     get isEmpty(): boolean {
         return this.vals.length == 0
     }
@@ -528,15 +578,11 @@ class Reader {
             case 0:
                 throw new ChannelException(ReaderEmpty, 'reader empty')
             case 1:
-                vals.pop()!.invoke(val)
+                vals.pop().invoke(val)
                 return
         }
-        const last = vals.length - 1
         const i = Math.floor(Math.random() * vals.length)
-        if (i != last) { //swap to end
-            [vals[i], vals[last]] = [vals[last], vals[i]]
-        }
-        vals.pop()!.invoke(val)
+        vals.removeBy(i).invoke(val)
     }
     close() {
         if (this.closed_) {
@@ -545,10 +591,10 @@ class Reader {
         this.closed_ = true
         const vals = this.vals
         if (vals.length != 0) {
-            for (const val of vals) {
+            for (const val of vals.vals) {
                 val.invoke(noResult)
             }
-            vals.splice(0)
+            vals.clear()
         }
     }
     connect(callback: ReadCallback): ReadValue {
@@ -557,13 +603,7 @@ class Reader {
         return val
     }
     disconet(val: ReadValue) {
-        const vals = this.vals
-        for (let i = 0; i < vals.length; i++) {
-            if (vals[i] == val) {
-                vals.splice(i, 1)
-                break
-            }
-        }
+        this.vals.remove(val)
     }
 }
 
@@ -583,7 +623,7 @@ type WriteCallback = (val: boolean) => void
 type RejectCallback = ((reason: any) => void) | undefined
 class Writer {
     private closed_ = false
-    private vals = new Array<WirteValue>()
+    private vals = new Values<WirteValue>()
     get isEmpty(): boolean {
         return this.vals.length == 0
     }
@@ -593,16 +633,12 @@ class Writer {
             case 0:
                 throw new ChannelException(WriterEmpty, "writer empty")
             case 1:
-                const p = vals.pop()!
+                const p = vals.pop()
                 p.invoke()
                 return p.value
         }
-        const last = vals.length - 1
         const i = Math.floor(Math.random() * vals.length)
-        if (i != last) { //swap to end
-            [vals[i], vals[last]] = [vals[last], vals[i]]
-        }
-        const p = vals.pop()!
+        const p = vals.removeBy(i)
         p.invoke()
         return p.value
     }
@@ -613,10 +649,10 @@ class Writer {
         this.closed_ = true
         const vals = this.vals
         if (vals.length != 0) {
-            for (const val of vals) {
+            for (const val of vals.vals) {
                 val.error()
             }
-            vals.splice(0)
+            vals.clear()
         }
     }
     connect(callback: WriteCallback, reject: RejectCallback, val: any): WirteValue {
@@ -625,13 +661,7 @@ class Writer {
         return result
     }
     disconet(val: WirteValue) {
-        const vals = this.vals
-        for (let i = 0; i < vals.length; i++) {
-            if (vals[i] == val) {
-                vals.splice(i, 1)
-                break
-            }
-        }
+        this.vals.remove(val)
     }
 }
 class WirteValue {
