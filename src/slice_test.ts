@@ -116,7 +116,7 @@ QUnit.module('slice', hooks => {
         assert.equal(b1.toString(), str + 'ab')
         const b2 = b1.slice(0, b1.length - 1)
         assert.equal(b2.toString(), str + 'a')
-        const view = b2.dateView()
+        const view = b2.dataView()
         view.setUint8(b2.length - 1, 99)
         view.setUint8(0, 100)
         assert.equal(b1.toString(), 'd測試cb')

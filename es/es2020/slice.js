@@ -1,6 +1,35 @@
 import { noResult } from "./values";
 import { defaultAssert } from './assert';
 import { classForEach, ClassForEach } from './internal/decorator';
+function growSlice(old, oldcap, cap) {
+    let newcap = oldcap;
+    const doublecap = newcap + newcap;
+    if (cap > doublecap) {
+        newcap = cap;
+    }
+    else {
+        const threshold = 256;
+        if (oldcap < threshold) {
+            newcap = doublecap;
+        }
+        else {
+            // Check 0 < newcap to detect overflow
+            // and prevent an infinite loop.
+            while (0 < newcap && newcap < cap) {
+                // Transition from growing 2x for small slices
+                // to growing 1.25x for large slices. This formula
+                // gives a smooth-ish transition between the two.
+                newcap += Math.floor((newcap + 3 * threshold) / 4);
+            }
+            // Set newcap to the requested cap when
+            // the newcap calculation overflowed.
+            if (newcap <= 0) {
+                newcap = cap;
+            }
+        }
+    }
+    return newcap;
+}
 export class Slice extends ClassForEach {
     constructor(array, start, end) {
         super();
@@ -138,7 +167,8 @@ export class Slice extends ClassForEach {
             return new Slice(this.array, this.start, this.end);
         }
         const cap = this.capacity;
-        const grow = this.length + add;
+        const len = this.length;
+        const grow = len + add;
         if (grow < cap) {
             const a = this.array;
             let i = this.end;
@@ -147,8 +177,15 @@ export class Slice extends ClassForEach {
             }
             return new Slice(a, this.start, i);
         }
-        const a = Array.from(this);
-        a.push(...vals);
+        const arr = this.array;
+        const a = new Array(growSlice(len, cap, grow));
+        let i = 0;
+        for (; i < len; i++) {
+            a[i] = arr[i];
+        }
+        for (const val of vals) {
+            a[i++] = val;
+        }
         return new Slice(a, 0, a.length);
     }
     /**
@@ -289,9 +326,47 @@ export class Bytes extends ClassForEach {
     /**
      *
      * return DataView of Bytes
+     * @throws TypeError
+     * @throws RangeError
      */
-    dateView() {
-        return new DataView(this.buffer, this.start, this.length);
+    dataView(start, end) {
+        const max = this.capacity;
+        start = start ?? 0;
+        end = end ?? this.length;
+        defaultAssert.isUInt({
+            name: "start",
+            val: start,
+            max: max,
+        }, {
+            name: "end",
+            val: end,
+            max: max,
+            min: start,
+        });
+        const o = this.start;
+        return new DataView(this.buffer, o + start, end - start);
+    }
+    /**
+     * return Uint8Array of Bytes
+     * @throws TypeError
+     * @throws RangeError
+     */
+    data(start, end) {
+        const max = this.capacity;
+        start = start ?? 0;
+        end = end ?? this.length;
+        defaultAssert.isUInt({
+            name: "start",
+            val: start,
+            max: max,
+        }, {
+            name: "end",
+            val: end,
+            max: max,
+            min: start,
+        });
+        const o = this.start;
+        return new Uint8Array(this.buffer, o + start, end - start);
     }
     /**
      * take sub-slices
@@ -318,10 +393,10 @@ export class Bytes extends ClassForEach {
     copy(src) {
         const n = this.length < src.length ? this.length : src.length;
         if (n != 0) {
-            const d = this.dateView();
-            const s = src.dateView();
+            const d = this.data();
+            const s = src.data(undefined, n);
             for (let i = 0; i < n; i++) {
-                d.setUint8(i, s.getUint8(i));
+                d.set(s);
             }
         }
         return n;
@@ -332,16 +407,15 @@ export class Bytes extends ClassForEach {
      * @override
      */
     iterator(reverse) {
-        const a = this.dateView();
-        let start = 0;
-        let end = a.byteLength;
+        const a = this.data();
         if (reverse) {
-            let i = end - 1;
+            const start = 0;
+            let i = a.byteLength - 1;
             return {
                 next() {
                     if (i >= start) {
                         return {
-                            value: a.getUint8(i--),
+                            value: a[i--],
                         };
                     }
                     return noResult;
@@ -349,17 +423,7 @@ export class Bytes extends ClassForEach {
             };
         }
         else {
-            let i = start;
-            return {
-                next() {
-                    if (i < end) {
-                        return {
-                            value: a.getUint8(i++),
-                        };
-                    }
-                    return noResult;
-                }
-            };
+            return a[Symbol.iterator]();
         }
     }
     /**
@@ -385,87 +449,90 @@ export class Bytes extends ClassForEach {
         if (add == 0) {
             return new Bytes(this.buffer, this.start, this.end);
         }
-        return this._append(new bytesNumber(vals));
+        return this._append(vals);
     }
     appendBytes(...vals) {
-        let dst = new Bytes(this.buffer, this.start, this.end);
-        for (const v of vals) {
-            dst = dst._append(new bytesView(v.dateView(), v.length));
+        switch (vals.length) {
+            case 0:
+                return new Bytes(this.buffer, this.start, this.end);
+            case 1:
+                return this._append(vals[0].data());
+            default:
+                return this._appends(vals.map((val) => val.data()));
         }
-        return dst;
     }
     appendArrayBuffer(...vals) {
-        let dst = new Bytes(this.buffer, this.start, this.end);
-        for (const v of vals) {
-            dst = dst._append(new bytesView(new DataView(v), v.byteLength));
+        switch (vals.length) {
+            case 0:
+                return new Bytes(this.buffer, this.start, this.end);
+            case 1:
+                return this._append(new Uint8Array(vals[0]));
+            default:
+                return this._appends(vals.map((val) => new Uint8Array(val)));
+        }
+    }
+    appendString(...strs) {
+        switch (strs.length) {
+            case 0:
+                return new Bytes(this.buffer, this.start, this.end);
+            case 1:
+                return this._append(new TextEncoder().encode(strs[0]));
+            default:
+                return this._appends(strs.map((val) => new TextEncoder().encode(val)));
+        }
+    }
+    _appends(vals) {
+        const start = this.start;
+        let end = this.end;
+        if (vals.length == 0) {
+            return new Bytes(this.buffer, start, end);
+        }
+        let add = 0;
+        for (const val of vals) {
+            add += val.length;
+        }
+        if (add == 0) {
+            return new Bytes(this.buffer, start, end);
+        }
+        const dst = this._growSlice(add);
+        const view = dst.data();
+        for (const val of vals) {
+            view.set(val, end);
+            end += val.length;
         }
         return dst;
     }
-    appendString(str) {
-        if (str.length == 0) {
-            return new Bytes(this.buffer, this.start, this.end);
-        }
-        return this.appendArrayBuffer(new TextEncoder().encode(str).buffer);
-    }
-    _append(b) {
-        const add = b.length();
+    _growSlice(add) {
         if (add == 0) {
             return new Bytes(this.buffer, this.start, this.end);
         }
         let cap = this.capacity;
-        const length = this.length;
-        const grow = length + add;
+        const len = this.length;
+        const grow = len + add;
         if (grow < cap) {
             const start = this.end;
             const dst = new Bytes(this.buffer, this.start, start + add);
-            const view = dst.dateView();
-            for (let i = 0; i < add; i++) {
-                view.setUint8(start + i, b.get(i));
-            }
             return dst;
         }
-        cap = length * 2;
-        if (cap < grow) {
-            cap += grow;
-        }
-        const src = this.dateView();
+        cap = growSlice(len, cap, grow);
         const buffer = new ArrayBuffer(cap);
-        const view = new DataView(buffer);
+        const view = new Uint8Array(buffer);
         const dst = new Bytes(buffer, 0, grow);
-        for (let i = 0; i < length; i++) {
-            view.setUint8(i, src.getUint8(i));
+        view.set(this.data());
+        return dst;
+    }
+    _append(val) {
+        const add = val.length;
+        const end = this.end;
+        if (add == 0) {
+            return new Bytes(this.buffer, this.start, end);
         }
-        const start = this.end;
-        for (let i = 0; i < add; i++) {
-            view.setUint8(start + i, b.get(i));
-        }
+        const dst = this._growSlice(add);
+        dst.data().set(val, end);
         return dst;
     }
     toString() {
-        return new TextDecoder().decode(this.dateView());
-    }
-}
-class bytesView {
-    constructor(view, len) {
-        this.view = view;
-        this.len = len;
-    }
-    length() {
-        return this.len;
-    }
-    get(i) {
-        return this.view.getUint8(i);
-    }
-}
-class bytesNumber {
-    constructor(buffer) {
-        this.buffer = buffer;
-    }
-    length() {
-        return this.buffer.length;
-    }
-    get(i) {
-        return this.buffer[i];
+        return new TextDecoder().decode(this.data());
     }
 }
 //# sourceMappingURL=slice.js.map

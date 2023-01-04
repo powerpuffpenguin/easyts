@@ -110,8 +110,16 @@ export declare class Bytes extends ClassForEach<number> implements Iterable<numb
     /**
      *
      * return DataView of Bytes
+     * @throws TypeError
+     * @throws RangeError
      */
-    dateView(): DataView;
+    dataView(start?: number, end?: number): DataView;
+    /**
+     * return Uint8Array of Bytes
+     * @throws TypeError
+     * @throws RangeError
+     */
+    data(start?: number, end?: number): Uint8Array;
     /**
      * take sub-slices
      * @throws TypeError
@@ -141,7 +149,9 @@ export declare class Bytes extends ClassForEach<number> implements Iterable<numb
     append(...vals: Array<number>): Bytes;
     appendBytes(...vals: Array<Bytes>): Bytes;
     appendArrayBuffer(...vals: Array<ArrayBuffer>): Bytes;
-    appendString(str: string): Bytes;
+    appendString(...strs: Array<string>): Bytes;
+    private _appends;
+    private _growSlice;
     private _append;
     toString(): string;
 }
