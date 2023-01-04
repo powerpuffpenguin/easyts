@@ -126,7 +126,10 @@ export declare class Bytes extends ClassForEach<number> implements Iterable<numb
      * @throws RangeError
      */
     slice(start?: number, end?: number): Bytes;
-    copy(src: Bytes): number;
+    copyBytes(src: Bytes): number;
+    copyArray(src: ArrayLike<number> | ArrayBuffer): number;
+    copyString(src: string): number;
+    private _copy;
     /**
      * return js iterator
      * @param reverse If true, returns an iterator to traverse in reverse
@@ -148,7 +151,7 @@ export declare class Bytes extends ClassForEach<number> implements Iterable<numb
      */
     append(...vals: Array<number>): Bytes;
     appendBytes(...vals: Array<Bytes>): Bytes;
-    appendArrayBuffer(...vals: Array<ArrayBuffer>): Bytes;
+    appendArray(...vals: Array<ArrayBuffer | ArrayLike<number>>): Bytes;
     appendString(...strs: Array<string>): Bytes;
     private _appends;
     private _growSlice;

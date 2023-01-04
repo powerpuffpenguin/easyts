@@ -411,17 +411,30 @@ export class Bytes extends ClassForEach<number> implements Iterable<number>{
         const o = this.start
         return new Bytes(this.buffer, o + start, o + end)
     }
-    copy(src: Bytes): number {
-        const n = this.length < src.length ? this.length : src.length
+    copyBytes(src: Bytes): number {
+        if (src.length == 0) {
+            return 0
+        }
+        return this._copy(src.data())
+    }
+    copyArray(src: ArrayLike<number> | ArrayBuffer): number {
+        return this._copy(new Uint8Array(src))
+    }
+    copyString(src: string): number {
+        if (src.length == 0) {
+            return 0
+        }
+        return this._copy(new TextEncoder().encode(src))
+    }
+    private _copy(s: Uint8Array): number {
+        const n = this.length < s.length ? this.length : s.length
         if (n != 0) {
             const d = this.data()
-            const s = src.data(undefined, n)
-            for (let i = 0; i < n; i++) {
-                d.set(s)
-            }
+            d.set(s)
         }
         return n
     }
+
     /**
      * return js iterator
      * @param reverse If true, returns an iterator to traverse in reverse
@@ -470,7 +483,7 @@ export class Bytes extends ClassForEach<number> implements Iterable<number>{
         if (add == 0) {
             return new Bytes(this.buffer, this.start, this.end)
         }
-        return this._append(vals)
+        return this._append(new Uint8Array(vals))
     }
     appendBytes(...vals: Array<Bytes>): Bytes {
         switch (vals.length) {
@@ -482,7 +495,7 @@ export class Bytes extends ClassForEach<number> implements Iterable<number>{
                 return this._appends(vals.map((val) => val.data()))
         }
     }
-    appendArrayBuffer(...vals: Array<ArrayBuffer>): Bytes {
+    appendArray(...vals: Array<ArrayBuffer | ArrayLike<number>>): Bytes {
         switch (vals.length) {
             case 0:
                 return new Bytes(this.buffer, this.start, this.end)
@@ -502,7 +515,7 @@ export class Bytes extends ClassForEach<number> implements Iterable<number>{
                 return this._appends(strs.map((val) => new TextEncoder().encode(val)))
         }
     }
-    private _appends(vals: Array<ArrayLike<number>>): Bytes {
+    private _appends(vals: Array<Uint8Array>): Bytes {
         const start = this.start
         let end = this.end
         if (vals.length == 0) {
@@ -543,7 +556,7 @@ export class Bytes extends ClassForEach<number> implements Iterable<number>{
         view.set(this.data())
         return dst
     }
-    private _append(val: ArrayLike<number>): Bytes {
+    private _append(val: Uint8Array): Bytes {
         const add = val.length
         const end = this.end
         if (add == 0) {
