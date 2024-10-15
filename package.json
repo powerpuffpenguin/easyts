@@ -1,9 +1,9 @@
 {
   "name": "@king011/easyts",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "js library written with ts",
   "scripts": {
-    "deno":"node deno.js",
+    "deno": "node deno.js",
     "docs": "typedoc --plugin none",
     "test": "qunit lib/es5/mod_test.js && qunit lib/es6/mod_test.js && qunit lib/es2022/mod_test.js",
     "bt5": "tsc -t es5 --outDir lib/es5 --downlevelIteration && qunit lib/es5/mod_test.js",

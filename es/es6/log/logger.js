@@ -9,7 +9,7 @@ export const defaultOutput = {
         }
         if (opts.time) {
             const d = new Date();
-            const str = `[${d.getFullYear()}/${pad(d.getMonth(), 2)}/${pad(d.getDay(), 2)} ${pad(d.getHours(), 2)}:${pad(d.getMinutes(), 2)}:${pad(d.getSeconds(), 2)}]`;
+            const str = `[${d.getFullYear()}/${pad(d.getMonth() + 1, 2)}/${pad(d.getDate(), 2)} ${pad(d.getHours(), 2)}:${pad(d.getMinutes(), 2)}:${pad(d.getSeconds(), 2)}]`;
             if (prefix == '') {
                 prefix = str;
             }
